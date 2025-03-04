@@ -18,8 +18,9 @@ find_package(tachimawari_interfaces REQUIRED)
 find_package(ament_cmake REQUIRED)
 
 add_executable(robot_wrapper
-  src/wrapper/robot_wrapper.cpp
-  src/node.cpp)
+  src/main.cpp
+  src/robot_wrapper/robot_wrapper.cpp
+  src/node/node.cpp)
 
   
 target_include_directories(robot_wrapper PUBLIC
