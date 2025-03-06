@@ -29,7 +29,7 @@ extern std::map<u_int8_t, std::string> joint_dictionary;
 
 class RobotWrapper{
     public:
-        RobotWrapper(std::string model_directory);
+        RobotWrapper(const std::string & model_directory);
         void build_urdf();
         void update_kinematics();
         void get_frame_indexes();
