@@ -36,7 +36,8 @@ class RobotWrapper{
         void publish_tf_tree();
         void update_joint_positions(u_int8_t joint_id, double position);
         std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
-        
+
+    private:
         std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
         pinocchio::Model model;
         pinocchio::Data* data;
