@@ -1,32 +1,9 @@
-#include "robot_wrapper/robot_wrapper.hpp"
+#include "taisei/robot_wrapper/robot_wrapper.hpp"
+#include <jitsuyo/config.hpp>
+#include <nlohmann/json.hpp>
+#include <fstream>
 
-std::vector<std::pair<std::string, int>> links = {
-    {"base_link", 0},
-    {"body", 0},
-    {"left_groin", 1},
-    {"left_buttock", 2},
-    {"left_thigh", 3},
-    {"left_calf", 4},
-    {"left_heel", 5},
-    {"left_foot", 6},
-    {"left_foot_frame", 7},
-    {"left_shoulder", 1},
-    {"left_upper_arm", 9},
-    {"left_forearm", 10},
-    {"neck", 1},
-    {"head", 12},
-    {"camera", 13},
-    {"right_groin", 1},
-    {"right_buttock", 15},
-    {"right_thigh", 16},
-    {"right_calf", 17},
-    {"right_heel", 18},
-    {"right_foot", 19},
-    {"right_foot_frame", 20},
-    {"right_shoulder", 1},
-    {"right_upper_arm", 22},
-    {"right_forearm", 23}
-};
+namespace taisei {
 
 std::map<u_int8_t, std::string> joint_dictionary = {
     {1, "right_shoulder_pitch"},
@@ -51,7 +28,7 @@ std::map<u_int8_t, std::string> joint_dictionary = {
     {20, "neck_pitch"},
   };
 
-RobotWrapper::RobotWrapper(std::string model_directory) : model_directory_(model_directory){
+RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path) : model_directory_(model_directory), path_(config_path){
     build_urdf();
     update_kinematics();
     get_frame_indexes();
@@ -70,16 +47,24 @@ void RobotWrapper::update_kinematics(){
 }
 
 void RobotWrapper::get_frame_indexes(){
+    get_config();
     for(size_t i = 1; i<links.size(); i++){
-        const auto &frame_id = model.getFrameId(links[i].first);
-        const auto &frame_parent_id = model.getFrameId(links[links[i].second].first);
+
+        const std::string& link_name = links[i].name;
+        const auto &frame_id = model.getFrameId(link_name);
+
+        const int link_parent_id = links[i].parent_id;
+        
+        const std::string& parent_link_name = links[link_parent_id].name;
+
+        const auto &frame_parent_id = model.getFrameId(parent_link_name);
         frame_indexes.push_back(std::make_pair(frame_id, frame_parent_id));
     }
 }
 
 void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
-    const auto jointName = joint_dictionary[joint_id];
-    auto idx = model.getJointId(jointName);
+    const auto joint_name = joint_dictionary[joint_id];
+    auto idx = model.getJointId(joint_name);
     position = position * M_PI/180.0;
     q[idx-1] = position;
     update_kinematics();
@@ -116,3 +101,26 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames(){
     
     return tf_frames;
 }
+
+void RobotWrapper::get_config(){
+
+    nlohmann::json link_names;
+    if(!jitsuyo::load_config(path_, "frame_names.json", link_names)){
+        std::cerr << "Failed to load config" << std::endl;
+        return;
+    }
+
+    for (const auto& entry : link_names["links"]) {
+        Link link;
+        bool success = true;
+
+        for(const auto& [name, parent_id_json] : entry.items()){
+            link.name = name;
+            success = jitsuyo::assign_val(entry, name, link.parent_id);
+        }
+
+        links.push_back(link);
+    };
+}
+
+} //namespace taisei

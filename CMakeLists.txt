@@ -4,6 +4,8 @@ project(taisei)
 set(BOOST_ROOT "/usr")         
 set(BOOST_INCLUDEDIR "/usr/include")
 set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
+list(APPEND CMAKE_PREFIX_PATH "/home/riyan/pinocchio_ws/install/keisan/share/keisan/cmake")
+list(APPEND CMAKE_PREFIX_PATH "/home/riyan/pinocchio_ws/install/jitsuyo/share/jitsuyo/cmake")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -12,36 +14,76 @@ endif()
 find_package(rclcpp REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(pinocchio REQUIRED)
 find_package(tachimawari_interfaces REQUIRED)
+find_package(keisan REQUIRED)
+find_package(jitsuyo REQUIRED)
 find_package(ament_cmake REQUIRED)
 
-add_executable(robot_wrapper
-  src/main.cpp
-  src/robot_wrapper/robot_wrapper.cpp
-  src/node/node.cpp)
-
-  
-target_include_directories(robot_wrapper PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+add_library(${PROJECT_NAME} SHARED
+   "src/${PROJECT_NAME}/node/taisei_node.cpp"
+   "src/${PROJECT_NAME}/robot_wrapper/robot_wrapper.cpp"
 )
 
-target_link_libraries(robot_wrapper
-  pinocchio::pinocchio
-  Eigen3::Eigen)
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 
-ament_target_dependencies(robot_wrapper
+target_link_libraries(${PROJECT_NAME}
+  Eigen3::Eigen
+  pinocchio::pinocchio
+)
+
+ament_target_dependencies(${PROJECT_NAME}
     rclcpp
     tf2_ros
     geometry_msgs
     pinocchio
-    Eigen3
-    tachimawari_interfaces)
+    tachimawari_interfaces
+    keisan
+    jitsuyo)
+
+install(DIRECTORY "include" DESTINATION ".")
+
+install(TARGETS ${PROJECT_NAME}
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION "lib"
+  LIBRARY DESTINATION "lib"
+  RUNTIME DESTINATION "bin"
+)
+
+add_executable(robot_wrapper
+  src/main.cpp
+)
+
+target_include_directories(robot_wrapper PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(robot_wrapper PUBLIC
+  Eigen3::Eigen
+  pinocchio::pinocchio
+  ${PROJECT_NAME}
+)
 
 install(TARGETS
     robot_wrapper
-    DESTINATION lib/${PROJECT_NAME}/
-  )
+    DESTINATION lib/${PROJECT_NAME}
+)
 
+ament_export_dependencies(
+  rclcpp
+  tf2_ros
+  geometry_msgs
+  pinocchio
+  tachimawari_interfaces
+  keisan
+  jitsuyo
+)
+
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
 ament_package()

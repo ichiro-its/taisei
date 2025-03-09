@@ -1,13 +1,15 @@
-#include "node/node.hpp"
+#include "taisei/node/taisei_node.hpp"
 
 using namespace std::chrono_literals;
 
-RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string &model_directory) : node(node)
-{ 
-    robot_wrapper = std::make_shared<RobotWrapper>(model_directory);
-    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
+namespace taisei
+{
 
-    node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});
+
+RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path) : node(node)
+{ 
+    robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path);
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
     joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("topic", 10, 
     [this](tachimawari_interfaces::msg::CurrentJoints::SharedPtr msg) -> void {
@@ -15,6 +17,8 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const st
             robot_wrapper->update_joint_positions(joint.id, joint.position);
         }
     });
+
+    node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});
 }
 
 void RobotWrapperNode::broadcast_tf_frames(){
@@ -24,4 +28,6 @@ void RobotWrapperNode::broadcast_tf_frames(){
         tf_broadcaster_->sendTransform(tf_frame);
     }
 }
+
+} //namespace taisei
 

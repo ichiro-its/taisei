@@ -1,15 +1,17 @@
-#ifndef TAISEI_NODE_HPP
-#define TAISEI_NODE_HPP    
+#ifndef TAISE__NODE__TAISEI_NODE_HPP
+#define TAISEI__NODE__TAISEI_NODE_HPP    
 
-#include "robot_wrapper/robot_wrapper.hpp"
+#include "taisei/robot_wrapper/robot_wrapper.hpp"
 
 using TransformStamped = geometry_msgs::msg::TransformStamped;
+
+namespace taisei{
 
 class RobotWrapperNode
 {
 public:
 
-    RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string &model_directory); 
+    RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path); 
 
     void broadcast_tf_frames();
 
@@ -23,4 +25,5 @@ private:
     rclcpp::TimerBase::SharedPtr node_timer;
 };
 
-#endif //NODE_HPP
+} //namespace taisei
+#endif //TAISEI_NODE_HPP
