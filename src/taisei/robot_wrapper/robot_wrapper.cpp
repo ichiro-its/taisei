@@ -1,37 +1,38 @@
+// MIT License
+
+// Copyright (c) 2025 ICHIRO ITS
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "taisei/robot_wrapper/robot_wrapper.hpp"
+#include "tachimawari/joint/model/joint_id.hpp"
 #include <jitsuyo/config.hpp>
 #include <nlohmann/json.hpp>
 #include <fstream>
 
 namespace taisei {
 
-std::map<u_int8_t, std::string> joint_dictionary = {
-    {1, "right_shoulder_pitch"},
-    {2, "left_shoulder_pitch"},
-    {3, "right_shoulder_roll"},
-    {4, "left_shoulder_roll"},
-    {5, "right_elbow"},
-    {6, "left_elbow"},
-    {7, "right_hip_yaw"},
-    {8, "left_hip_yaw"},
-    {9, "right_hip_roll"},
-    {10, "left_hip_roll"},
-    {11, "right_hip_pitch"},
-    {12, "left_hip_pitch"},
-    {13, "right_knee"},
-    {14, "left_knee"},
-    {15, "right_ankle_pitch"},
-    {16, "left_ankle_pitch"},
-    {17, "right_ankle_roll"},
-    {18, "left_ankle_roll"},
-    {19, "neck_yaw"},
-    {20, "neck_pitch"},
-  };
-
 RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path) : model_directory_(model_directory), path_(config_path){
     build_urdf();
     update_kinematics();
     get_frame_indexes();
+    get_joint_dictionary();
 }
 
 void RobotWrapper::build_urdf(){
@@ -48,18 +49,18 @@ void RobotWrapper::update_kinematics(){
 
 void RobotWrapper::get_frame_indexes(){
     get_config();
-    for(size_t i = 1; i<links.size(); i++){
 
-        const std::string& link_name = links[i].name;
-        const auto &frame_id = model.getFrameId(link_name);
+    for(const auto& link : links){
 
-        const int link_parent_id = links[i].parent_id;
+        if(link.name == "base_link") continue;
         
-        const std::string& parent_link_name = links[link_parent_id].name;
-
+        const auto &frame_id = model.getFrameId(link.name);
+        const std::string& parent_link_name = links[link.parent_id].name;
         const auto &frame_parent_id = model.getFrameId(parent_link_name);
+
         frame_indexes.push_back(std::make_pair(frame_id, frame_parent_id));
     }
+ 
 }
 
 void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
@@ -104,23 +105,29 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames(){
 
 void RobotWrapper::get_config(){
 
-    nlohmann::json link_names;
+    nlohmann::ordered_json link_names;
     if(!jitsuyo::load_config(path_, "frame_names.json", link_names)){
         std::cerr << "Failed to load config" << std::endl;
         return;
     }
 
-    for (const auto& entry : link_names["links"]) {
+    for (const auto & item : link_names.items()){
         Link link;
-        bool success = true;
+        const std::string& key = item.key();
+        bool success;
 
-        for(const auto& [name, parent_id_json] : entry.items()){
-            link.name = name;
-            success = jitsuyo::assign_val(entry, name, link.parent_id);
-        }
+        success = jitsuyo::assign_val(link_names, key, link.parent_id);
 
+        link.name = key;
         links.push_back(link);
-    };
+    }
+}
+
+void RobotWrapper::get_joint_dictionary(){
+    for (const auto &pair : tachimawari::joint::JointId::by_name) {
+        joint_dictionary[pair.second] = pair.first;
+    }
 }
 
 } //namespace taisei
+

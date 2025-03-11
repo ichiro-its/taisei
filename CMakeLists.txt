@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(taisei)
 
-set(BOOST_ROOT "/usr")         
-set(BOOST_INCLUDEDIR "/usr/include")
-set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
-list(APPEND CMAKE_PREFIX_PATH "/home/riyan/pinocchio_ws/install/keisan/share/keisan/cmake")
-list(APPEND CMAKE_PREFIX_PATH "/home/riyan/pinocchio_ws/install/jitsuyo/share/jitsuyo/cmake")
-
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -17,6 +11,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(tachimawari_interfaces REQUIRED)
+find_package(tachimawari  REQUIRED)
 find_package(keisan REQUIRED)
 find_package(jitsuyo REQUIRED)
 find_package(ament_cmake REQUIRED)
@@ -42,6 +37,7 @@ ament_target_dependencies(${PROJECT_NAME}
     geometry_msgs
     pinocchio
     tachimawari_interfaces
+    tachimawari
     keisan
     jitsuyo)
 
@@ -80,6 +76,7 @@ ament_export_dependencies(
   geometry_msgs
   pinocchio
   tachimawari_interfaces
+  tachimawari
   keisan
   jitsuyo
 )
