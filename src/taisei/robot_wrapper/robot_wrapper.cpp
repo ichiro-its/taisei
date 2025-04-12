@@ -28,7 +28,7 @@
 
 namespace taisei {
 
-RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path) : model_directory_(model_directory), path_(config_path){
+RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, std::shared_ptr<BaseFootprint> base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint_(base_footprint){
     build_urdf();
     update_kinematics();
     get_frame_indexes();
@@ -71,37 +71,76 @@ void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
     update_kinematics();
 }
 
-std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames(){
+pinocchio::SE3 RobotWrapper::get_left_foot_frame(){
+    const auto &frame_id = model.getFrameId("left_foot_frame");
+    return data->oMf[frame_id];
+}
+
+pinocchio::SE3 RobotWrapper::get_right_foot_frame(){
+    const auto &frame_id = model.getFrameId("right_foot_frame");
+    return data->oMf[frame_id];
+}
+
+std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() {
     std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
-    for(size_t i = 0; i<frame_indexes.size(); i++){
-        const auto &frame = model.frames[frame_indexes[i].first];
-        const auto &frame_parent = model.frames[frame_indexes[i].second];
-        const auto &parent_transform = data->oMf[frame_indexes[i].second];
-        
-        pinocchio::SE3 relative_transform = parent_transform.inverse() * data->oMf[frame_indexes[i].first];
-        Eigen::Vector3d translation = relative_transform.translation();
+    const pinocchio::SE3 computed_base_footprint = base_footprint_->compute_base_footprint(
+        get_right_foot_frame(), 
+        get_left_foot_frame()
+    );
+    bool added_base_footprint = false;
 
-        geometry_msgs::msg::TransformStamped tf_frame;
-        tf_frame.header.frame_id = frame_parent.name;
-        tf_frame.child_frame_id = frame.name;
+    // Helper function to create TransformStamped from SE3
+    auto create_transform = [](const std::string& parent_frame, const std::string& child_frame, const pinocchio::SE3& transform) {
+        geometry_msgs::msg::TransformStamped tf;
+        tf.header.frame_id = parent_frame;
+        tf.child_frame_id = child_frame;
 
-        tf_frame.transform.translation.x = translation.x();
-        tf_frame.transform.translation.y = translation.y();
-        tf_frame.transform.translation.z = translation.z();
+        const Eigen::Vector3d translation = transform.translation();
+        tf.transform.translation.x = translation.x();
+        tf.transform.translation.y = translation.y();
+        tf.transform.translation.z = translation.z();
 
-        Eigen::Quaterniond quat(relative_transform.rotation());
+        Eigen::Quaterniond quat(transform.rotation());
         quat.normalize();
+        tf.transform.rotation.x = quat.x();
+        tf.transform.rotation.y = quat.y();
+        tf.transform.rotation.z = quat.z();
+        tf.transform.rotation.w = quat.w();
 
-        tf_frame.transform.rotation.x = quat.x();
-        tf_frame.transform.rotation.y = quat.y();
-        tf_frame.transform.rotation.z = quat.z();
-        tf_frame.transform.rotation.w = quat.w();
+        return tf;
+    };
 
-        tf_frames.push_back(tf_frame);
+    for (const auto& [frame_idx, parent_idx] : frame_indexes) {
+        const auto& frame = model.frames[frame_idx];
+        const auto& frame_parent = model.frames[parent_idx];
+        const auto& parent_transform = data->oMf[parent_idx];
+
+        if (frame_parent.name == "base_link") {
+            if (!added_base_footprint) {
+                tf_frames.push_back(create_transform(
+                    "base_link", "base_footprint", computed_base_footprint
+                ));
+                added_base_footprint = true;
+            }
+
+            const pinocchio::SE3 adjusted_transform = 
+                computed_base_footprint.inverse() * data->oMf[frame_idx];
+            
+            tf_frames.push_back(create_transform(
+                "base_footprint", frame.name, adjusted_transform
+            ));
+        } else {
+            const pinocchio::SE3 relative_transform = 
+                parent_transform.inverse() * data->oMf[frame_idx];
+            
+            tf_frames.push_back(create_transform(
+                frame_parent.name, frame.name, relative_transform
+            ));
+        }
     }
-    
     return tf_frames;
 }
+
 
 void RobotWrapper::get_config(){
 
@@ -128,6 +167,8 @@ void RobotWrapper::get_joint_dictionary(){
         joint_dictionary[pair.second] = pair.first;
     }
 }
+
+
 
 } //namespace taisei
 

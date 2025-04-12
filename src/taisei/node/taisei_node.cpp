@@ -29,15 +29,21 @@ namespace taisei
 
 
 RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path) : node(node)
-{ 
-    robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path);
+{   
+    base_footprint_ = std::make_shared<BaseFootprint>();
+    robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path, base_footprint_);
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
-    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("topic", 10, 
+    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("joint_topic", 10, 
     [this](tachimawari_interfaces::msg::CurrentJoints::SharedPtr msg) -> void {
         for(const auto& joint : msg->joints){
             robot_wrapper->update_joint_positions(joint.id, joint.position);
         }
+    });
+
+    orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("orientation_topic", 10,
+    [this](kansei_interfaces::msg::Status::SharedPtr msg) -> void {
+        base_footprint_->get_odom_orientation(msg->orientation.yaw);
     });
 
     node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});
