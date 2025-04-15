@@ -30,7 +30,7 @@ namespace taisei
 
 RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path) : node(node)
 {   
-    base_footprint_ = std::make_shared<BaseFootprint>();
+    base_footprint_ = std::make_shared<BaseFootprint>(0.0);
     robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path, base_footprint_);
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
@@ -43,7 +43,8 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const st
 
     orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("orientation_topic", 10,
     [this](kansei_interfaces::msg::Status::SharedPtr msg) -> void {
-        base_footprint_->get_odom_orientation(msg->orientation.yaw);
+        auto yaw = keisan::make_degree(msg->orientation.yaw);
+        base_footprint_->update_orientation(yaw);
     });
 
     node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});

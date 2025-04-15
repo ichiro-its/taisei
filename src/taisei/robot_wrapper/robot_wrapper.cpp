@@ -28,7 +28,7 @@
 
 namespace taisei {
 
-RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, std::shared_ptr<BaseFootprint> base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint_(base_footprint){
+RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint>& base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint_(base_footprint){
     build_urdf();
     update_kinematics();
     get_frame_indexes();
@@ -71,12 +71,12 @@ void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
     update_kinematics();
 }
 
-pinocchio::SE3 RobotWrapper::get_left_foot_frame(){
+const pinocchio::SE3& RobotWrapper::get_left_foot_frame(){
     const auto &frame_id = model.getFrameId("left_foot_frame");
     return data->oMf[frame_id];
 }
 
-pinocchio::SE3 RobotWrapper::get_right_foot_frame(){
+const pinocchio::SE3& RobotWrapper::get_right_foot_frame(){
     const auto &frame_id = model.getFrameId("right_foot_frame");
     return data->oMf[frame_id];
 }

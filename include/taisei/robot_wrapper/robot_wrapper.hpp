@@ -60,7 +60,7 @@ class RobotWrapper
 {
 public:
 
-    RobotWrapper(const std::string & model_directory, const std::string & config_path, std::shared_ptr<BaseFootprint> base_footprint);
+    RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint);
     void build_urdf();
     void update_kinematics();
     void get_frame_indexes();
@@ -68,8 +68,8 @@ public:
     void get_joint_dictionary();
     void get_config();
     std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
-    pinocchio::SE3 get_left_foot_frame();
-    pinocchio::SE3 get_right_foot_frame();
+    const pinocchio::SE3 & get_left_foot_frame();
+    const pinocchio::SE3 & get_right_foot_frame();
 
 private:
 
