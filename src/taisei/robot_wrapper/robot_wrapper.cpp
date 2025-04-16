@@ -83,7 +83,7 @@ const pinocchio::SE3& RobotWrapper::get_right_foot_frame(){
 
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() {
     std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
-    const pinocchio::SE3 computed_base_footprint = base_footprint_->compute_base_footprint(
+    const pinocchio::SE3 computed_base_footprint = base_footprint->compute_base_footprint(
         get_right_foot_frame(), 
         get_left_foot_frame()
     );

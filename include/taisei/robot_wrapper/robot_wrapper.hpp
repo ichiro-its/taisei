@@ -81,7 +81,7 @@ private:
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
     std::map<uint8_t, std::string> joint_dictionary;
     std::vector<Link> links;
-    std::shared_ptr<BaseFootprint> base_footprint_;
+    std::shared_ptr<BaseFootprint> base_footprint;
 
 };
 

@@ -25,8 +25,8 @@
 
 namespace taisei{
 
-BaseFootprint::BaseFootprint(double yaw){
-    rotation = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+BaseFootprint::BaseFootprint(){
+    rotation = Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
 void BaseFootprint::update_orientation(keisan::Angle<double> yaw){
@@ -51,10 +51,10 @@ const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE
     
 
     base_footprint_ = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
-    base_footprint_.translation().z() = 0.0;
+    base_footprint.translation().z() = 0.0;
     
-    base_footprint_.rotation() = rotation;
-    return base_footprint_;
+    base_footprint.rotation() = rotation;
+    return base_footprint;
 }
 
 } //namespace taisei

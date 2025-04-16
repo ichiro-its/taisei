@@ -42,7 +42,7 @@ public:
 
 private:
 
-    pinocchio::SE3 base_footprint_;
+    pinocchio::SE3 base_footprint;
     pinocchio::SE3 pivot_foot;
     pinocchio::SE3 swing_foot;
 

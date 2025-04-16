@@ -30,7 +30,7 @@ namespace taisei
 
 RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path) : node(node)
 {   
-    base_footprint_ = std::make_shared<BaseFootprint>(0.0);
+    base_footprint_ = std::make_shared<BaseFootprint>();
     robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path, base_footprint_);
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
