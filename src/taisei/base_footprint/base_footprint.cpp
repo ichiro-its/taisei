@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 #include "taisei/base_footprint/base_footprint.hpp"
-#include <iostream>
 
 namespace taisei{
 
@@ -33,7 +32,7 @@ void BaseFootprint::update_orientation(keisan::Angle<double> yaw){
     rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
-const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE3& r_foot_frame, const pinocchio::SE3& l_foot_frame){
+const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame){
     if (r_foot_frame.translation().z() < l_foot_frame.translation().z()) {
         pivot_foot = r_foot_frame;
         swing_foot = l_foot_frame;

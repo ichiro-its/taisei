@@ -23,8 +23,8 @@
 #ifndef TAISE__NODE__TAISEI_NODE_HPP
 #define TAISEI__NODE__TAISEI_NODE_HPP    
 
-#include "taisei/robot_wrapper/robot_wrapper.hpp"
 #include "taisei/base_footprint/base_footprint.hpp"
+#include "taisei/robot_wrapper/robot_wrapper.hpp"
 
 
 
@@ -35,16 +35,16 @@ class RobotWrapperNode
 public:
     using TransformStamped = geometry_msgs::msg::TransformStamped;
 
-    RobotWrapperNode(const rclcpp::Node::SharedPtr& node, const std::string & model_directory, const std::string & config_path); 
+    RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string & config_path); 
 
     void broadcast_tf_frames();
 
 private:
     
     std::shared_ptr<RobotWrapper> robot_wrapper;
-    std::shared_ptr<BaseFootprint> base_footprint_;
+    std::shared_ptr<BaseFootprint> base_footprint;
     std::vector<TransformStamped> tf_frames;
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
     rclcpp::Node::SharedPtr node;
     rclcpp::Subscription<tachimawari_interfaces::msg::CurrentJoints>::SharedPtr joint_subscriber;
     rclcpp::Subscription<kansei_interfaces::msg::Status>::SharedPtr orientation_subscriber;

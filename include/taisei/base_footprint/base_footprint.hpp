@@ -37,7 +37,7 @@ class BaseFootprint
 public:
 
     BaseFootprint(double yaw);
-    const pinocchio::SE3& compute_base_footprint(const pinocchio::SE3& r_foot_frame, const pinocchio::SE3& l_foot_frame);
+    const pinocchio::SE3 & compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame);
     void update_orientation(keisan::Angle<double> yaw);
 
 private:
