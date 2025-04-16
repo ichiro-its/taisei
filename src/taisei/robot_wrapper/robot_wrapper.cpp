@@ -28,7 +28,7 @@
 
 namespace taisei {
 
-RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint_(base_footprint){
+RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint(base_footprint){
     build_urdf();
     update_kinematics();
     get_frame_indexes();
@@ -90,7 +90,7 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
     bool added_base_footprint = false;
 
     // Helper function to create TransformStamped from SE3
-    auto create_transform = [](const std::string& parent_frame, const std::string& child_frame, const pinocchio::SE3& transform) {
+    auto create_transform = [](const std::string & parent_frame, const std::string & child_frame, const pinocchio::SE3 & transform) {
         geometry_msgs::msg::TransformStamped tf;
         tf.header.frame_id = parent_frame;
         tf.child_frame_id = child_frame;

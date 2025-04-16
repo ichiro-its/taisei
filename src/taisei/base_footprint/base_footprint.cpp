@@ -47,9 +47,7 @@ const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE
     translation.x() = swing_foot_in_pivot_frame.translation().x()/2.0;
     translation.y() = swing_foot_in_pivot_frame.translation().y()/2.0;
 
-    
-
-    base_footprint_ = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
+    base_footprint = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
     base_footprint.translation().z() = 0.0;
     
     base_footprint.rotation() = rotation;
