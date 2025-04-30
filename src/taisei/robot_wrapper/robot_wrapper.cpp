@@ -25,6 +25,7 @@
 #include <jitsuyo/config.hpp>
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <stdexcept>
 
 namespace taisei {
 
@@ -146,8 +147,7 @@ void RobotWrapper::get_config(){
 
     nlohmann::ordered_json link_names;
     if(!jitsuyo::load_config(path_, "frame_names.json", link_names)){
-        std::cerr << "Failed to load config" << std::endl;
-        return;
+        throw std::runtime_error("Failed to load config file 'frame_names.json'");
     }
 
     for (const auto & item : link_names.items()){
