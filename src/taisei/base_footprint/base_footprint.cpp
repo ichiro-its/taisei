@@ -28,7 +28,7 @@ BaseFootprint::BaseFootprint(){
     rotation = Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
-void BaseFootprint::update_orientation(keisan::Angle<double> yaw){
+void BaseFootprint::update_orientation(const keisan::Angle<double> & yaw){
     rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
