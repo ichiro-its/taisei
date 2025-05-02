@@ -34,14 +34,14 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
     robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path, base_footprint);
     tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
-    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("joint_topic", 10, 
+    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("/joint/current_joints", 10, 
     [this](tachimawari_interfaces::msg::CurrentJoints::SharedPtr msg) -> void {
         for(const auto& joint : msg->joints){
             robot_wrapper->update_joint_positions(joint.id, joint.position);
         }
     });
 
-    orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("orientation_topic", 10,
+    orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("/measurement/status", 10,
     [this](kansei_interfaces::msg::Status::SharedPtr msg) -> void {
         auto yaw = keisan::make_degree(msg->orientation.yaw);
         base_footprint->update_orientation(yaw);
