@@ -43,8 +43,10 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
 
     orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("/measurement/status", 10,
     [this](kansei_interfaces::msg::Status::SharedPtr msg) -> void {
+        auto roll = keisan::make_degree(msg->orientation.roll);
+        auto pitch = keisan::make_degree(msg->orientation.pitch);
         auto yaw = keisan::make_degree(msg->orientation.yaw);
-        base_footprint->update_orientation(yaw);
+        robot_wrapper->update_orientation(roll, pitch, yaw);
     });
 
     node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});

@@ -37,9 +37,8 @@ class BaseFootprint
 public:
 
     BaseFootprint();
-    const pinocchio::SE3 & compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame);
-    void update_orientation(const keisan::Angle<double> & yaw);
-
+    const pinocchio::SE3 & compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame, const keisan::Angle<double> & yaw);
+    
 private:
 
     pinocchio::SE3 base_footprint;

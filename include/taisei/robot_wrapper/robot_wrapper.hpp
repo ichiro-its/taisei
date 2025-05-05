@@ -56,6 +56,7 @@ struct Link{
     int parent_id;
 };
 
+
 class RobotWrapper
 {
 public:
@@ -65,6 +66,7 @@ public:
     void update_kinematics();
     void get_frame_indexes();
     void update_joint_positions(u_int8_t joint_id, double position);
+    void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
     void get_config();
     std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
@@ -78,6 +80,8 @@ private:
     std::string model_directory_;
     std::string path_;
     Eigen::VectorXd q;
+    Eigen::Quaterniond body_quaterniond;
+    keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
     std::map<uint8_t, std::string> joint_dictionary;
     std::vector<Link> links;

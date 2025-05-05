@@ -34,21 +34,22 @@ RobotWrapper::RobotWrapper(const std::string & model_directory, const std::strin
     update_kinematics();
     get_frame_indexes();
     get_joint_dictionary();
+    body_quaterniond.setIdentity();
 }
 
-void RobotWrapper::build_urdf(){
+void RobotWrapper::build_urdf() {
     pinocchio::urdf::buildModel(model_directory_, model);
     data = new pinocchio::Data(model);
     q = pinocchio::neutral(model);
 }
 
-void RobotWrapper::update_kinematics(){
+void RobotWrapper::update_kinematics() {
     pinocchio::forwardKinematics(model, *data, q);
     pinocchio::updateGlobalPlacements(model, *data);
     pinocchio::updateFramePlacements(model, *data);
 }
 
-void RobotWrapper::get_frame_indexes(){
+void RobotWrapper::get_frame_indexes() {
     get_config();
 
     for(const auto& link : links){
@@ -72,12 +73,19 @@ void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
     update_kinematics();
 }
 
-const pinocchio::SE3 & RobotWrapper::get_left_foot_frame(){
+void RobotWrapper::update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw) {
+    body_quaterniond = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()) 
+    * Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY()) 
+    * Eigen::AngleAxisd(roll.radian(), Eigen::Vector3d::UnitX());
+    body_quaterniond.normalize();
+};
+
+const pinocchio::SE3 & RobotWrapper::get_left_foot_frame() {
     const auto &frame_id = model.getFrameId("left_foot_frame");
     return data->oMf[frame_id];
 }
 
-const pinocchio::SE3 & RobotWrapper::get_right_foot_frame(){
+const pinocchio::SE3 & RobotWrapper::get_right_foot_frame() {
     const auto &frame_id = model.getFrameId("right_foot_frame");
     return data->oMf[frame_id];
 }
@@ -86,12 +94,13 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
     std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
     const pinocchio::SE3 computed_base_footprint = base_footprint->compute_base_footprint(
         get_right_foot_frame(), 
-        get_left_foot_frame()
+        get_left_foot_frame(),
+        yaw_
     );
     bool added_base_footprint = false;
 
     // Helper function to create TransformStamped from SE3
-    auto create_transform = [](const std::string & parent_frame, const std::string & child_frame, const pinocchio::SE3 & transform) {
+    auto create_transform = [this](const std::string & parent_frame, const std::string & child_frame, const pinocchio::SE3 & transform) {
         geometry_msgs::msg::TransformStamped tf;
         tf.header.frame_id = parent_frame;
         tf.child_frame_id = child_frame;
@@ -100,6 +109,15 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
         tf.transform.translation.x = translation.x();
         tf.transform.translation.y = translation.y();
         tf.transform.translation.z = translation.z();
+
+        if (child_frame == "body") {
+            tf.transform.rotation.x = this->body_quaterniond.x();
+            tf.transform.rotation.y = this->body_quaterniond.y();
+            tf.transform.rotation.z = this->body_quaterniond.z();
+            tf.transform.rotation.w = this->body_quaterniond.w();
+
+            return tf;
+        }
 
         Eigen::Quaterniond quat(transform.rotation());
         quat.normalize();

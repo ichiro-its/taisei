@@ -28,11 +28,9 @@ BaseFootprint::BaseFootprint(){
     rotation = Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
-void BaseFootprint::update_orientation(const keisan::Angle<double> & yaw){
-    rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
-}
 
-const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame){
+const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame, 
+    const keisan::Angle<double> & yaw) {
     if (r_foot_frame.translation().z() < l_foot_frame.translation().z()) {
         pivot_foot = r_foot_frame;
         swing_foot = l_foot_frame;
@@ -49,7 +47,8 @@ const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE
 
     base_footprint = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
     base_footprint.translation().z() = 0.0;
-    
+
+    rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
     base_footprint.rotation() = rotation;
     return base_footprint;
 }
