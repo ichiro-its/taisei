@@ -39,6 +39,8 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 
+#include "taisei/base_footprint/base_footprint.hpp"
+
 #include <chrono>
 #include <vector>
 #include <memory>
@@ -54,8 +56,23 @@ struct Link{
     int parent_id;
 };
 
-class RobotWrapper{
-    
+
+class RobotWrapper
+{
+public:
+
+    RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint);
+    void build_urdf();
+    void update_kinematics();
+    void get_frame_indexes();
+    void update_joint_positions(u_int8_t joint_id, double position);
+    void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
+    void get_joint_dictionary();
+    void get_config();
+    std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
+    const pinocchio::SE3 & get_left_foot_frame();
+    const pinocchio::SE3 & get_right_foot_frame();
+
 private:
 
     pinocchio::Model model;
@@ -63,20 +80,12 @@ private:
     std::string model_directory_;
     std::string path_;
     Eigen::VectorXd q;
+    Eigen::Quaterniond body_quaterniond;
+    keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
     std::map<uint8_t, std::string> joint_dictionary;
     std::vector<Link> links;
-
-public:
-
-    RobotWrapper(const std::string & model_directory, const std::string & config_path);
-    void build_urdf();
-    void update_kinematics();
-    void get_frame_indexes();
-    void update_joint_positions(u_int8_t joint_id, double position);
-    void get_joint_dictionary();
-    void get_config();
-    std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
+    std::shared_ptr<BaseFootprint> base_footprint;
 
 };
 

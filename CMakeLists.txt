@@ -11,6 +11,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(tachimawari_interfaces REQUIRED)
+find_package(kansei_interfaces REQUIRED)
 find_package(tachimawari  REQUIRED)
 find_package(keisan REQUIRED)
 find_package(jitsuyo REQUIRED)
@@ -19,6 +20,7 @@ find_package(ament_cmake REQUIRED)
 add_library(${PROJECT_NAME} SHARED
    "src/${PROJECT_NAME}/node/taisei_node.cpp"
    "src/${PROJECT_NAME}/robot_wrapper/robot_wrapper.cpp"
+   "src/${PROJECT_NAME}/base_footprint/base_footprint.cpp"
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

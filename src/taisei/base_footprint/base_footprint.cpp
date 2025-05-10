@@ -20,37 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef TAISE__NODE__TAISEI_NODE_HPP
-#define TAISEI__NODE__TAISEI_NODE_HPP    
-
 #include "taisei/base_footprint/base_footprint.hpp"
-#include "taisei/robot_wrapper/robot_wrapper.hpp"
-
-
 
 namespace taisei{
 
-class RobotWrapperNode
-{
-public:
-    using TransformStamped = geometry_msgs::msg::TransformStamped;
+BaseFootprint::BaseFootprint(){
+    rotation = Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+}
 
-    RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string & config_path); 
 
-    void broadcast_tf_frames();
-
-private:
+const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame, 
+    const keisan::Angle<double> & yaw) {
+    if (r_foot_frame.translation().z() < l_foot_frame.translation().z()) {
+        pivot_foot = r_foot_frame;
+        swing_foot = l_foot_frame;
+    } else {
+        pivot_foot = l_foot_frame;
+        swing_foot = r_foot_frame;
+    }
+       
+    pinocchio::SE3 swing_foot_in_pivot_frame = pivot_foot.inverse() * swing_foot;
     
-    std::shared_ptr<RobotWrapper> robot_wrapper;
-    std::shared_ptr<BaseFootprint> base_footprint;
-    std::vector<TransformStamped> tf_frames;
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
-    rclcpp::Node::SharedPtr node;
-    rclcpp::Subscription<tachimawari_interfaces::msg::CurrentJoints>::SharedPtr joint_subscriber;
-    rclcpp::Subscription<kansei_interfaces::msg::Status>::SharedPtr orientation_subscriber;
-    rclcpp::TimerBase::SharedPtr node_timer;
-};
+    translation.z() = 0.0;
+    translation.x() = swing_foot_in_pivot_frame.translation().x()/2.0;
+    translation.y() = swing_foot_in_pivot_frame.translation().y()/2.0;
+
+    base_footprint = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
+    base_footprint.translation().z() = 0.0;
+
+    rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    base_footprint.rotation() = rotation;
+    return base_footprint;
+}
 
 } //namespace taisei
-
-#endif //TAISEI__NODE__TAISEI_NODE_HPP    

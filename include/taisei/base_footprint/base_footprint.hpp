@@ -20,37 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef TAISE__NODE__TAISEI_NODE_HPP
-#define TAISEI__NODE__TAISEI_NODE_HPP    
+#ifndef TAISEI__BASE_FOOTPRINT__BASE_FOOTPRINT_HPP_
+#define TAISEI__BASE_FOOTPRINT__BASE_FOOTPRINT_HPP_
 
-#include "taisei/base_footprint/base_footprint.hpp"
-#include "taisei/robot_wrapper/robot_wrapper.hpp"
-
-
+#include "Eigen/Geometry"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "pinocchio/spatial/se3.hpp"
+#include "kansei_interfaces/msg/status.hpp"
+#include "keisan/keisan.hpp"
+#include "math.h"
 
 namespace taisei{
 
-class RobotWrapperNode
+class BaseFootprint
 {
 public:
-    using TransformStamped = geometry_msgs::msg::TransformStamped;
 
-    RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string & config_path); 
-
-    void broadcast_tf_frames();
-
-private:
+    BaseFootprint();
+    const pinocchio::SE3 & compute_base_footprint(const pinocchio::SE3 & r_foot_frame, const pinocchio::SE3 & l_foot_frame, const keisan::Angle<double> & yaw);
     
-    std::shared_ptr<RobotWrapper> robot_wrapper;
-    std::shared_ptr<BaseFootprint> base_footprint;
-    std::vector<TransformStamped> tf_frames;
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
-    rclcpp::Node::SharedPtr node;
-    rclcpp::Subscription<tachimawari_interfaces::msg::CurrentJoints>::SharedPtr joint_subscriber;
-    rclcpp::Subscription<kansei_interfaces::msg::Status>::SharedPtr orientation_subscriber;
-    rclcpp::TimerBase::SharedPtr node_timer;
+private:
+
+    pinocchio::SE3 base_footprint;
+    pinocchio::SE3 pivot_foot;
+    pinocchio::SE3 swing_foot;
+
+    Eigen::Vector3d translation;
+    Eigen::Matrix3d rotation;
+ 
 };
 
 } //namespace taisei
 
-#endif //TAISEI__NODE__TAISEI_NODE_HPP    
+#endif //TAISEI__BASE_FOOTPRINT__BASE_FOOTPRINT_HPP_
