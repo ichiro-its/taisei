@@ -70,8 +70,7 @@ public:
     void get_joint_dictionary();
     void get_config();
     std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
-    const pinocchio::SE3 & get_left_foot_frame();
-    const pinocchio::SE3 & get_right_foot_frame();
+    const pinocchio::SE3 & get_frame_by_name(std::string);
 
 private:
 

@@ -38,18 +38,16 @@ const pinocchio::SE3 & BaseFootprint::compute_base_footprint(const pinocchio::SE
         pivot_foot = l_foot_frame;
         swing_foot = r_foot_frame;
     }
-       
-    pinocchio::SE3 swing_foot_in_pivot_frame = pivot_foot.inverse() * swing_foot;
     
-    translation.z() = 0.0;
-    translation.x() = swing_foot_in_pivot_frame.translation().x()/2.0;
-    translation.y() = swing_foot_in_pivot_frame.translation().y()/2.0;
-
-    base_footprint = pivot_foot * pinocchio::SE3(Eigen::Matrix3d::Identity(), translation);
-    base_footprint.translation().z() = 0.0;
+    translation.x() = (pivot_foot.translation().x() + swing_foot.translation().x())/2;
+    translation.y() = (pivot_foot.translation().y() + swing_foot.translation().y())/2;
+    translation.z() = pivot_foot.translation().z();
 
     rotation = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()).toRotationMatrix();
+
+    base_footprint.translation() = translation;
     base_footprint.rotation() = rotation;
+
     return base_footprint;
 }
 

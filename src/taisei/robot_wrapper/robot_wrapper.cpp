@@ -56,6 +56,7 @@ void RobotWrapper::get_frame_indexes() {
 
         if(link.name == "base_link") continue;
         
+        //store each frame's index based on the frame's name
         const auto &frame_id = model.getFrameId(link.name);
         const std::string& parent_link_name = links[link.parent_id].name;
         const auto &frame_parent_id = model.getFrameId(parent_link_name);
@@ -80,24 +81,19 @@ void RobotWrapper::update_orientation(const keisan::Angle<double> & roll, const 
     body_quaterniond.normalize();
 };
 
-const pinocchio::SE3 & RobotWrapper::get_left_foot_frame() {
-    const auto &frame_id = model.getFrameId("left_foot_frame");
-    return data->oMf[frame_id];
-}
-
-const pinocchio::SE3 & RobotWrapper::get_right_foot_frame() {
-    const auto &frame_id = model.getFrameId("right_foot_frame");
+const pinocchio::SE3 & RobotWrapper::get_frame_by_name(std::string name){
+    const auto &frame_id = model.getFrameId(name);
     return data->oMf[frame_id];
 }
 
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() {
     std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
-    const pinocchio::SE3 computed_base_footprint = base_footprint->compute_base_footprint(
-        get_right_foot_frame(), 
-        get_left_foot_frame(),
+    const pinocchio::SE3 body_transform = data->oMf[frame_indexes[0].first];
+    const pinocchio::SE3 computed_base_footprint = body_transform.inverse() * base_footprint->compute_base_footprint(
+        get_frame_by_name("right_foot_frame"), 
+        get_frame_by_name("left_foot_frame"),
         yaw_
     );
-    bool added_base_footprint = false;
 
     // Helper function to create TransformStamped from SE3
     auto create_transform = [this](const std::string & parent_frame, const std::string & child_frame, const pinocchio::SE3 & transform) {
@@ -134,33 +130,18 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
         const auto& frame_parent = model.frames[parent_idx];
         const auto& parent_transform = data->oMf[parent_idx];
 
-        if (frame_parent.name == "base_link") {
-            if (!added_base_footprint) {
-                tf_frames.push_back(create_transform(
-                    "base_link", "base_footprint", computed_base_footprint
-                ));
-                added_base_footprint = true;
-            }
-
-            const pinocchio::SE3 adjusted_transform = 
-                computed_base_footprint.inverse() * data->oMf[frame_idx];
-            
-            tf_frames.push_back(create_transform(
-                "base_footprint", frame.name, adjusted_transform
-            ));
-        } else {
-            const pinocchio::SE3 relative_transform = 
-                parent_transform.inverse() * data->oMf[frame_idx];
-            
-            tf_frames.push_back(create_transform(
-                frame_parent.name, frame.name, relative_transform
-            ));
+        const pinocchio::SE3 relative_transform = parent_transform.inverse() * data->oMf[frame_idx];
+        tf_frames.push_back(create_transform(frame_parent.name, frame.name, relative_transform));
         }
+
+        tf_frames.push_back(create_transform("body", "base_footprint", computed_base_footprint));
+        return tf_frames;
     }
-    return tf_frames;
-}
+
+ 
 
 
+// function to set each frame's relation to another based on the frame_names config
 void RobotWrapper::get_config(){
 
     nlohmann::ordered_json link_names;
