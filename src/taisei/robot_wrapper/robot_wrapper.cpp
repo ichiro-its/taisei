@@ -174,8 +174,9 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
     for (size_t i = 1; i < model.frames.size(); ++i) {
         const auto& frame = model.frames[i];
 
-        if (frame.type != pinocchio::FrameType::BODY)
-            continue;
+    if (frame.type == pinocchio::OP_FRAME ||
+        frame.type == pinocchio::SENSOR)
+        continue;
         const auto& parent_idx = frame.parentFrame;
 
         geometry_msgs::msg::TransformStamped ts;
