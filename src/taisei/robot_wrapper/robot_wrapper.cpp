@@ -91,10 +91,20 @@ void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position_deg
 }
 
 void RobotWrapper::update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw) {
-    body_quaterniond = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ()) 
-    * Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY()) 
-    * Eigen::AngleAxisd(roll.radian(), Eigen::Vector3d::UnitX());
-    body_quaterniond.normalize();
+    Eigen::Quaterniond imu_q = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ())
+                            *  Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY())
+                            *  Eigen::AngleAxisd(roll.radian(), Eigen::Vector3d::UnitX());
+    imu_q.normalize();
+    body_quaterniond = imu_q;
+
+    if (q.size() >= 7) {
+        q[3] = imu_q.x();
+        q[4] = imu_q.y();
+        q[5] = imu_q.z();
+        q[6] = imu_q.w();
+    }
+
+    update_kinematics();
 };
 
 const pinocchio::SE3 & RobotWrapper::get_frame_by_name(std::string name){
