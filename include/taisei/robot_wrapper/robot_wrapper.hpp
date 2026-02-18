@@ -64,7 +64,7 @@ public:
     RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint);
     void build_urdf();
     void update_kinematics();
-    void get_frame_indexes();
+    void get_q_indexes();
     void update_joint_positions(u_int8_t joint_id, double position);
     void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
@@ -76,9 +76,13 @@ private:
 
     pinocchio::Model model;
     pinocchio::Data* data;
+    Eigen::VectorXd q;
+
     std::string model_directory_;
     std::string path_;
-    Eigen::VectorXd q;
+    
+    std::unordered_map<std::string, int> q_index_map;
+
     Eigen::Quaterniond body_quaterniond;
     keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;

@@ -32,13 +32,13 @@ namespace taisei {
 RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint(base_footprint){
     build_urdf();
     update_kinematics();
-    get_frame_indexes();
+    get_q_indexes();
     get_joint_dictionary();
     body_quaterniond.setIdentity();
 }
 
 void RobotWrapper::build_urdf() {
-    pinocchio::urdf::buildModel(model_directory_, model);
+    pinocchio::urdf::buildModel(model_directory_, pinocchio::JointModelFreeFlyer(), model);
     data = new pinocchio::Data(model);
     q = pinocchio::neutral(model);
 }
@@ -49,19 +49,12 @@ void RobotWrapper::update_kinematics() {
     pinocchio::updateFramePlacements(model, *data);
 }
 
-void RobotWrapper::get_frame_indexes() {
-    get_config();
+void RobotWrapper::get_q_indexes() {
+    for(pinocchio::JointIndex jid = 0; jid<model.njoints; ++jid){
+        const std::string& name = model.names[jid];
+        if(name.empty() continue);
 
-    for(const auto& link : links){
-
-        if(link.name == "base_link") continue;
-        
-        //store each frame's index based on the frame's name
-        const auto &frame_id = model.getFrameId(link.name);
-        const std::string& parent_link_name = links[link.parent_id].name;
-        const auto &frame_parent_id = model.getFrameId(parent_link_name);
-
-        frame_indexes.push_back(std::make_pair(frame_id, frame_parent_id));
+        q_index_map[name] = model.joints[jid].idx_q();
     }
  
 }
@@ -139,27 +132,6 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
     }
 
  
-
-
-// function to set each frame's relation to another based on the frame_names config
-void RobotWrapper::get_config(){
-
-    nlohmann::ordered_json link_names;
-    if(!jitsuyo::load_config(path_, "frame_names.json", link_names)){
-        throw std::runtime_error("Failed to load config file 'frame_names.json'");
-    }
-
-    for (const auto & item : link_names.items()){
-        Link link;
-        const std::string& key = item.key();
-        bool success;
-
-        success = jitsuyo::assign_val(link_names, key, link.parent_id);
-
-        link.name = key;
-        links.push_back(link);
-    }
-}
 
 void RobotWrapper::get_joint_dictionary(){
     for (const auto &pair : tachimawari::joint::JointId::by_name) {
