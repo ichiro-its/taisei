@@ -82,7 +82,8 @@ private:
     std::string path_;
     
     std::unordered_map<std::string, int> q_index_map;
-
+    std::string floating_base_name;
+    
     Eigen::Quaterniond body_quaterniond;
     keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;

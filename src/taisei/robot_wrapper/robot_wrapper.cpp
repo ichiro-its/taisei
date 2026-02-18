@@ -34,8 +34,16 @@ RobotWrapper::RobotWrapper(const std::string & model_directory, const std::strin
     update_kinematics();
     get_q_indexes();
     get_joint_dictionary();
+
+    if (model.names.size() > 1 && !model.names[1].empty()){
+        floating_base_name = model.names[1];
+    } else {
+        floating_base_name = "base_link";
+    }
+
     body_quaterniond.setIdentity();
 }
+
 
 void RobotWrapper::build_urdf() {
     pinocchio::urdf::buildModel(model_directory_, pinocchio::JointModelFreeFlyer(), model);
@@ -49,7 +57,9 @@ void RobotWrapper::update_kinematics() {
     pinocchio::updateFramePlacements(model, *data);
 }
 
+//get correct quartenion index of each joints
 void RobotWrapper::get_q_indexes() {
+    q_index_map.clear();
     for(pinocchio::JointIndex jid = 0; jid<model.njoints; ++jid){
         const std::string& name = model.names[jid];
         if(name.empty() continue);
@@ -59,11 +69,24 @@ void RobotWrapper::get_q_indexes() {
  
 }
 
-void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position){
-    const auto joint_name = joint_dictionary[joint_id];
-    auto idx = model.getJointId(joint_name);
-    position = position * M_PI/180.0;
-    q[idx-1] = position;
+//update joint position based on tachimawari's current joint
+void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position_deg){
+    const auto it_name = joint_dictionary.find(joint_id);
+    if (it_name == joint_dictionary.end()){
+        return;
+    }
+
+    const std::string joint_name = it_name->second;
+    double position = position_deg * M_PI/180.0; //convert deg to rad
+
+    auto it = q_index_map.find(joint_name);
+    if (it == q_index_map.end()){
+        return;
+    }
+
+    const int qidx = it->second;
+    if(qidx < 0 || qidx >= (int)q.size()) return;
+    q[qidx] = position;
     update_kinematics();
 }
 
