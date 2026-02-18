@@ -20,7 +20,6 @@ find_package(ament_cmake REQUIRED)
 add_library(${PROJECT_NAME} SHARED
    "src/${PROJECT_NAME}/node/taisei_node.cpp"
    "src/${PROJECT_NAME}/robot_wrapper/robot_wrapper.cpp"
-   "src/${PROJECT_NAME}/base_footprint/base_footprint.cpp"
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

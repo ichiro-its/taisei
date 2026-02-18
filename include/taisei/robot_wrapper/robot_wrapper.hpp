@@ -32,14 +32,14 @@
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/multibody/data.hpp"
 #include "Eigen/Geometry"
+#include "keisan/angle.hpp"
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tachimawari_interfaces/msg/current_joints.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
-
-#include "taisei/base_footprint/base_footprint.hpp"
+#include "kansei_interfaces/msg/status.hpp"
 
 #include <chrono>
 #include <vector>
@@ -51,17 +51,11 @@
 namespace taisei
 {
 
-struct Link{
-    std::string name;
-    int parent_id;
-};
-
-
 class RobotWrapper
 {
 public:
 
-    RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint);
+    RobotWrapper(const std::string & model_directory);
     void build_urdf();
     void update_kinematics();
     void get_q_indexes();
@@ -69,19 +63,20 @@ public:
     void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
     void get_config();
+    std::vector<geometry_msgs::msg::TransformStamped> get_all_transforms(const rclcpp::Time& stamp);
 
     double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
     pinocchio::SE3 compute_base_footprint_world();
     std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
-    const pinocchio::SE3 & get_frame_by_name(std::string);
+    const pinocchio::SE3 get_frame_by_name(const std::string& name);
     
 
 private:
 
     pinocchio::Model model;
-    pinocchio::Data* data;
+    std::unique_ptr<pinocchio::Data> data;
     Eigen::VectorXd q;
-
+    
     std::string model_directory_;
     std::string path_;
     
@@ -92,8 +87,7 @@ private:
     keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
     std::map<uint8_t, std::string> joint_dictionary;
-    std::vector<Link> links;
-    std::shared_ptr<BaseFootprint> base_footprint;
+
 
 };
 

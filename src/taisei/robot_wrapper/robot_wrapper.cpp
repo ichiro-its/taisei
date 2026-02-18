@@ -23,13 +23,12 @@
 #include "taisei/robot_wrapper/robot_wrapper.hpp"
 #include "tachimawari/joint/model/joint_id.hpp"
 #include <jitsuyo/config.hpp>
-#include <nlohmann/json.hpp>
-#include <fstream>
 #include <stdexcept>
+#include <cmath>
 
 namespace taisei {
 
-RobotWrapper::RobotWrapper(const std::string & model_directory, const std::string & config_path, const std::shared_ptr<BaseFootprint> & base_footprint) : model_directory_(model_directory), path_(config_path), base_footprint(base_footprint){
+RobotWrapper::RobotWrapper(const std::string & model_directory) : model_directory_(model_directory){
     build_urdf();
     update_kinematics();
     get_q_indexes();
@@ -47,7 +46,7 @@ RobotWrapper::RobotWrapper(const std::string & model_directory, const std::strin
 
 void RobotWrapper::build_urdf() {
     pinocchio::urdf::buildModel(model_directory_, pinocchio::JointModelFreeFlyer(), model);
-    data = new pinocchio::Data(model);
+    data = std::make_unique<pinocchio::Data>(model);
     q = pinocchio::neutral(model);
 }
 
@@ -60,9 +59,9 @@ void RobotWrapper::update_kinematics() {
 //get correct quartenion index of each joints
 void RobotWrapper::get_q_indexes() {
     q_index_map.clear();
-    for(pinocchio::JointIndex jid = 0; jid<model.njoints; ++jid){
+    for(pinocchio::JointIndex jid = 0; jid < model.njoints; ++jid){
         const std::string& name = model.names[jid];
-        if(name.empty() continue);
+        if (name.empty() ) continue;
 
         q_index_map[name] = model.joints[jid].idx_q();
     }
@@ -71,30 +70,35 @@ void RobotWrapper::get_q_indexes() {
 
 //update joint position based on tachimawari's current joint
 void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position_deg){
-    const auto it_name = joint_dictionary.find(joint_id);
-    if (it_name == joint_dictionary.end()){
-        return;
-    }
 
-    const std::string joint_name = it_name->second;
-    double position = position_deg * M_PI/180.0; //convert deg to rad
+    const auto it_name = joint_dictionary.find(joint_id);
+    if (it_name == joint_dictionary.end()) return;
+
+    const std::string& joint_name = it_name->second;
+    double position = position_deg * M_PI/180.0;
 
     auto it = q_index_map.find(joint_name);
-    if (it == q_index_map.end()){
-        return;
-    }
+    if (it == q_index_map.end()) return;
 
     const int qidx = it->second;
+
     if(qidx < 0 || qidx >= (int)q.size()) return;
     q[qidx] = position;
-    update_kinematics();
 }
 
-void RobotWrapper::update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw) {
-    Eigen::Quaterniond imu_q = Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ())
-                            *  Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY())
-                            *  Eigen::AngleAxisd(roll.radian(), Eigen::Vector3d::UnitX());
+
+void RobotWrapper::update_orientation(
+    const keisan::Angle<double>& roll,
+    const keisan::Angle<double>& pitch,
+    const keisan::Angle<double>& yaw)
+{
+    Eigen::Quaterniond imu_q =
+        Eigen::AngleAxisd(yaw.radian(),   Eigen::Vector3d::UnitZ()) *
+        Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY()) *
+        Eigen::AngleAxisd(roll.radian(),  Eigen::Vector3d::UnitX());
+
     imu_q.normalize();
+
     body_quaterniond = imu_q;
 
     if (q.size() >= 7) {
@@ -103,107 +107,114 @@ void RobotWrapper::update_orientation(const keisan::Angle<double> & roll, const 
         q[5] = imu_q.z();
         q[6] = imu_q.w();
     }
+}
 
-    update_kinematics();
-};
 
-const pinocchio::SE3 & RobotWrapper::get_frame_by_name(std::string name){
-    const auto &frame_id = model.getFrameId(name);
+const pinocchio::SE3 RobotWrapper::get_frame_by_name(const std::string& name){
+    if(!model.existFrame(name))
+        throw std::runtime_error("Frame not found: " + name);
+
+    const auto frame_id = model.getFrameId(name);
     return data->oMf[frame_id];
 }
 
-pinocchio::SE# RobotWrapper::compute_base_footprint_world(){
-    const auto& T_L = get_frame_by_name("left_foot_frame"); //left foot transform
-    const auto& T_R = get_frame_by_name("right_foot_frame"); //right foot transform
 
-    Eigen::Vector3d pL = T_L.translation(); //left foot position
-    Eigen::Vector3d pR = T_R.translation(); //right foot position
+// compute base footprint in world (returns by value pinocchio::SE3 in implementation below)
+pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
+    if (!model.existFrame("left_foot_frame") ||
+        !model.existFrame("right_foot_frame")) {
+        return pinocchio::SE3::Identity();
+    }
 
-    Eigen::Vector3d d = (pR - pL).normalized();
-    Eigen::Vector3d z_world(0, 0, 1);
+    const auto& T_L = data->oMf[model.getFrameId("left_foot_frame")];
+    const auto& T_R = data->oMf[model.getFrameId("right_foot_frame")];
 
-    Eigen::Vector3d n = z_world - z_world.dot(d) * d;
+    Eigen::Vector3d pL = T_L.translation(); 
+    Eigen::Vector3d pR = T_R.translation(); 
 
-    Eigen::Vector3d xg = d;
-    Eigen::Vector3d yg = n;
-    Eigen::Vector3d zg = zg.cross(xg).normalized;
+    Eigen::Vector3d lateral_vec = pL - pR;
+    Eigen::Vector3d yg;
 
-    Eigen::Matrix3d Rg;
-    Rg.col(0) = xg;
-    Rg.col(1) = yg;
-    Rg.col(2) = zg;
+    if (lateral_vec.norm() < 1e-8) {
+        double imu_yaw = get_yaw_from_quaternion(body_quaterniond);
+        yg = Eigen::Vector3d(-std::sin(imu_yaw), std::cos(imu_yaw), 0.0);
+    } else {
+        yg = lateral_vec.normalized();
+    }
 
-    // midpoint
-    Eigen::Vector3d mid = 0.5*(pL+pR);
+    Eigen::Vector3d z_world(0.0, 0.0, 1.0);
 
-    // project onto support plane
-    double h = zg.dot(pL);
-    Eigen::Vector3d mid_proj = mid - (zg.dot(mid)-h)*zg;
+    Eigen::Vector3d xg = yg.cross(z_world);
+    if (xg.norm() < 1e-8) {
+        xg = Eigen::Vector3d(1.0, 0.0, 0.0);
+    }
+    xg.normalize();
+    Eigen::Vector3d zg = xg.cross(yg).normalized();
+    yg = zg.cross(xg).normalized();
 
-    double yaw = yaw_from_quaternion(body_quaterniond);
-    Eigen::Matrix3d Rz =
-        Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    double yaw = get_yaw_from_quaternion(body_quaterniond);
 
-    Eigen::Matrix3d R = Rz * Rg;
+    Eigen::Matrix3d R_yaw_ground = Eigen::AngleAxisd(yaw, zg).toRotationMatrix();
 
-    return pinocchio::SE3(R, mid_proj);
+    Eigen::Vector3d mid = 0.5 * (pL + pR);
+    double ground_height = std::min(pL.z(), pR.z());
+    Eigen::Vector3d mid_proj = mid;
+    mid_proj.z() = ground_height; 
 
+    return pinocchio::SE3(R_yaw_ground, mid_proj);
 }
 
-std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() {
-    std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
-    const pinocchio::SE3 body_transform = data->oMf[frame_indexes[0].first];
-    const pinocchio::SE3 computed_base_footprint = body_transform.inverse() * base_footprint->compute_base_footprint(
-        get_frame_by_name("right_foot_frame"), 
-        get_frame_by_name("left_foot_frame"),
-        yaw_
-    );
+std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transforms(const rclcpp::Time& stamp) {
+    update_kinematics();
+    
+    pinocchio::SE3 T_w_bf = compute_base_footprint_world();
+    
+    std::vector<geometry_msgs::msg::TransformStamped> tf_list;
 
-    // Helper function to create TransformStamped from SE3
-    auto create_transform = [this](const std::string & parent_frame, const std::string & child_frame, const pinocchio::SE3 & transform) {
-        geometry_msgs::msg::TransformStamped tf;
-        tf.header.frame_id = parent_frame;
-        tf.child_frame_id = child_frame;
+    for (size_t i = 1; i < model.frames.size(); ++i) {
+        const auto& frame = model.frames[i];
 
-        const Eigen::Vector3d translation = transform.translation();
-        tf.transform.translation.x = translation.x();
-        tf.transform.translation.y = translation.y();
-        tf.transform.translation.z = translation.z();
+        if (frame.type != pinocchio::FrameType::BODY)
+            continue;
+        const auto& parent_idx = frame.parentFrame;
 
-        if (child_frame == "body") {
-            tf.transform.rotation.x = this->body_quaterniond.x();
-            tf.transform.rotation.y = this->body_quaterniond.y();
-            tf.transform.rotation.z = this->body_quaterniond.z();
-            tf.transform.rotation.w = this->body_quaterniond.w();
+        geometry_msgs::msg::TransformStamped ts;
+        ts.header.stamp = stamp;
+        ts.child_frame_id = frame.name;
 
-            return tf;
+        pinocchio::SE3 T_relative;
+        if (parent_idx == 0) {
+            ts.header.frame_id = "base_footprint";
+        
+            pinocchio::SE3 T_w_link = data->oMf[i];
+            T_relative = T_w_bf.inverse() * T_w_link;
+        } 
+        else {
+            ts.header.frame_id = model.frames[parent_idx].name;
+            
+            pinocchio::SE3 T_w_p = data->oMf[parent_idx];
+            pinocchio::SE3 T_w_c = data->oMf[i];
+            T_relative = T_w_p.inverse() * T_w_c;
         }
 
-        Eigen::Quaterniond quat(transform.rotation());
-        quat.normalize();
-        tf.transform.rotation.x = quat.x();
-        tf.transform.rotation.y = quat.y();
-        tf.transform.rotation.z = quat.z();
-        tf.transform.rotation.w = quat.w();
+        // 3. Conversion to ROS message
+        ts.transform.translation.x = T_relative.translation().x();
+        ts.transform.translation.y = T_relative.translation().y();
+        ts.transform.translation.z = T_relative.translation().z();
 
-        return tf;
-    };
+        Eigen::Quaterniond q(T_relative.rotation());
+        ts.transform.rotation.x = q.x();
+        ts.transform.rotation.y = q.y();
+        ts.transform.rotation.z = q.z();
+        ts.transform.rotation.w = q.w();
 
-    for (const auto& [frame_idx, parent_idx] : frame_indexes) {
-        const auto& frame = model.frames[frame_idx];
-        const auto& frame_parent = model.frames[parent_idx];
-        const auto& parent_transform = data->oMf[parent_idx];
+        tf_list.push_back(ts);
+    }
 
-        const pinocchio::SE3 relative_transform = parent_transform.inverse() * data->oMf[frame_idx];
-        tf_frames.push_back(create_transform(frame_parent.name, frame.name, relative_transform));
-        }
-
-        tf_frames.push_back(create_transform("body", "base_footprint", computed_base_footprint));
-        return tf_frames;
+    return tf_list;
 }
 
- 
-RobotWrapper::get_yaw_from_quaternion(const Eigen::Quaterniond& q)
+double RobotWrapper::get_yaw_from_quaternion(const Eigen::Quaterniond& q)
 {
     const double w = q.w();
     const double x = q.x();
@@ -225,4 +236,3 @@ void RobotWrapper::get_joint_dictionary(){
 
 
 } //namespace taisei
-

@@ -28,10 +28,9 @@ namespace taisei
 {
 
 
-RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string & config_path) : node(node)
+RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory) : node(node)
 {   
-    base_footprint = std::make_shared<BaseFootprint>();
-    robot_wrapper = std::make_shared<RobotWrapper>(model_directory, config_path, base_footprint);
+    robot_wrapper = std::make_shared<RobotWrapper>(model_directory);
     tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
     joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("/joint/current_joints", 10, 
@@ -53,9 +52,8 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
 }
 
 void RobotWrapperNode::broadcast_tf_frames(){
-    tf_frames = robot_wrapper->get_tf_frames();
+    tf_frames = robot_wrapper->get_all_transforms(node->now());
     for(auto &tf_frame : tf_frames){
-        tf_frame.header.stamp = node->now();
         tf_broadcaster->sendTransform(tf_frame);
     }
 }
