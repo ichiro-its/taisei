@@ -69,8 +69,12 @@ public:
     void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
     void get_config();
+
+    double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
+    pinocchio::SE3 compute_base_footprint_world();
     std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
     const pinocchio::SE3 & get_frame_by_name(std::string);
+    
 
 private:
 
@@ -83,7 +87,7 @@ private:
     
     std::unordered_map<std::string, int> q_index_map;
     std::string floating_base_name;
-    
+
     Eigen::Quaterniond body_quaterniond;
     keisan::Angle<double> yaw_;
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;

@@ -112,6 +112,44 @@ const pinocchio::SE3 & RobotWrapper::get_frame_by_name(std::string name){
     return data->oMf[frame_id];
 }
 
+pinocchio::SE# RobotWrapper::compute_base_footprint_world(){
+    const auto& T_L = get_frame_by_name("left_foot_frame"); //left foot transform
+    const auto& T_R = get_frame_by_name("right_foot_frame"); //right foot transform
+
+    Eigen::Vector3d pL = T_L.translation(); //left foot position
+    Eigen::Vector3d pR = T_R.translation(); //right foot position
+
+    Eigen::Vector3d d = (pR - pL).normalized();
+    Eigen::Vector3d z_world(0, 0, 1);
+
+    Eigen::Vector3d n = z_world - z_world.dot(d) * d;
+
+    Eigen::Vector3d xg = d;
+    Eigen::Vector3d yg = n;
+    Eigen::Vector3d zg = zg.cross(xg).normalized;
+
+    Eigen::Matrix3d Rg;
+    Rg.col(0) = xg;
+    Rg.col(1) = yg;
+    Rg.col(2) = zg;
+
+    // midpoint
+    Eigen::Vector3d mid = 0.5*(pL+pR);
+
+    // project onto support plane
+    double h = zg.dot(pL);
+    Eigen::Vector3d mid_proj = mid - (zg.dot(mid)-h)*zg;
+
+    double yaw = yaw_from_quaternion(body_quaterniond);
+    Eigen::Matrix3d Rz =
+        Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+
+    Eigen::Matrix3d R = Rz * Rg;
+
+    return pinocchio::SE3(R, mid_proj);
+
+}
+
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() {
     std::vector<geometry_msgs::msg::TransformStamped> tf_frames;
     const pinocchio::SE3 body_transform = data->oMf[frame_indexes[0].first];
@@ -162,9 +200,21 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_tf_frames() 
 
         tf_frames.push_back(create_transform("body", "base_footprint", computed_base_footprint));
         return tf_frames;
-    }
+}
 
  
+RobotWrapper::get_yaw_from_quaternion(const Eigen::Quaterniond& q)
+{
+    const double w = q.w();
+    const double x = q.x();
+    const double y = q.y();
+    const double z = q.z();
+
+    const double siny_cosp = 2.0 * (w*z + x*y);
+    const double cosy_cosp = 1.0 - 2.0 * (y*y + z*z);
+
+    return std::atan2(siny_cosp, cosy_cosp);
+}
 
 void RobotWrapper::get_joint_dictionary(){
     for (const auto &pair : tachimawari::joint::JointId::by_name) {
