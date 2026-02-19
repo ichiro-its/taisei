@@ -121,8 +121,8 @@ const pinocchio::SE3 RobotWrapper::get_frame_by_name(const std::string& name){
 
 // compute base footprint in world 
 pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
-    if (!model.existFrame("left_foot_frame") ||
-        !model.existFrame("right_foot_frame")) {
+    if (!model.existFrame("left_foot") ||
+        !model.existFrame("right_foot")) {
         return pinocchio::SE3::Identity();
     }
 
