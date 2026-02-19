@@ -126,8 +126,8 @@ pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
         return pinocchio::SE3::Identity();
     }
 
-    const auto& T_L = data->oMf[model.getFrameId("left_foot_frame")];
-    const auto& T_R = data->oMf[model.getFrameId("right_foot_frame")];
+    const auto& T_L = data->oMf[model.getFrameId("left_foot")];
+    const auto& T_R = data->oMf[model.getFrameId("right_foot")];
 
     Eigen::Vector3d pL = T_L.translation();
     Eigen::Vector3d pR = T_R.translation();
@@ -153,8 +153,17 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
 
     for (size_t i = 1; i < model.frames.size(); ++i) {
         const auto& frame = model.frames[i];
+        auto parent_idx = frame.parentFrame;
 
-        const auto& parent_idx = frame.parentFrame;
+        //broadcast only BODY type frames
+        if (frame.type != pinocchio::FrameType::BODY)
+            continue;
+
+        while (parent_idx != 0 &&
+            model.frames[parent_idx].type != pinocchio::FrameType::BODY)
+        {
+            parent_idx = model.frames[parent_idx].parentFrame;
+        }
 
         geometry_msgs::msg::TransformStamped ts;
         ts.header.stamp = stamp;
@@ -209,7 +218,6 @@ void RobotWrapper::get_joint_dictionary(){
         joint_dictionary[pair.second] = pair.first;
     }
 }
-
 
 
 } //namespace taisei

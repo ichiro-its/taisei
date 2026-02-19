@@ -67,7 +67,6 @@ public:
 
     double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
     pinocchio::SE3 compute_base_footprint_world();
-    std::vector<geometry_msgs::msg::TransformStamped> get_tf_frames();
     const pinocchio::SE3 get_frame_by_name(const std::string& name);
     
 
