@@ -119,7 +119,7 @@ const pinocchio::SE3 RobotWrapper::get_frame_by_name(const std::string& name){
 }
 
 
-// compute base footprint in world (returns by value pinocchio::SE3 in implementation below)
+// compute base footprint in world 
 pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
     if (!model.existFrame("left_foot_frame") ||
         !model.existFrame("right_foot_frame")) {
@@ -129,39 +129,19 @@ pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
     const auto& T_L = data->oMf[model.getFrameId("left_foot_frame")];
     const auto& T_R = data->oMf[model.getFrameId("right_foot_frame")];
 
-    Eigen::Vector3d pL = T_L.translation(); 
-    Eigen::Vector3d pR = T_R.translation(); 
+    Eigen::Vector3d pL = T_L.translation();
+    Eigen::Vector3d pR = T_R.translation();
 
-    Eigen::Vector3d lateral_vec = pL - pR;
-    Eigen::Vector3d yg;
+    Eigen::Vector3d mid = 0.5 * (pL + pR);
 
-    if (lateral_vec.norm() < 1e-8) {
-        double imu_yaw = get_yaw_from_quaternion(body_quaterniond);
-        yg = Eigen::Vector3d(-std::sin(imu_yaw), std::cos(imu_yaw), 0.0);
-    } else {
-        yg = lateral_vec.normalized();
-    }
-
-    Eigen::Vector3d z_world(0.0, 0.0, 1.0);
-
-    Eigen::Vector3d xg = yg.cross(z_world);
-    if (xg.norm() < 1e-8) {
-        xg = Eigen::Vector3d(1.0, 0.0, 0.0);
-    }
-    xg.normalize();
-    Eigen::Vector3d zg = xg.cross(yg).normalized();
-    yg = zg.cross(xg).normalized();
+    // Use lowest foot for stable ground contact
+    mid.z() = std::min(pL.z(), pR.z());
 
     double yaw = get_yaw_from_quaternion(body_quaterniond);
 
-    Eigen::Matrix3d R_yaw_ground = Eigen::AngleAxisd(yaw, zg).toRotationMatrix();
+    Eigen::Matrix3d R = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
-    Eigen::Vector3d mid = 0.5 * (pL + pR);
-    double ground_height = std::min(pL.z(), pR.z());
-    Eigen::Vector3d mid_proj = mid;
-    mid_proj.z() = ground_height; 
-
-    return pinocchio::SE3(R_yaw_ground, mid_proj);
+    return pinocchio::SE3(R, mid);
 }
 
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transforms(const rclcpp::Time& stamp) {
@@ -174,9 +154,6 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
     for (size_t i = 1; i < model.frames.size(); ++i) {
         const auto& frame = model.frames[i];
 
-    if (frame.type == pinocchio::OP_FRAME ||
-        frame.type == pinocchio::SENSOR)
-        continue;
         const auto& parent_idx = frame.parentFrame;
 
         geometry_msgs::msg::TransformStamped ts;
@@ -198,7 +175,6 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
             T_relative = T_w_p.inverse() * T_w_c;
         }
 
-        // 3. Conversion to ROS message
         ts.transform.translation.x = T_relative.translation().x();
         ts.transform.translation.y = T_relative.translation().y();
         ts.transform.translation.z = T_relative.translation().z();
