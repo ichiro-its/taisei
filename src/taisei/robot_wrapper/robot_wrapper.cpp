@@ -71,16 +71,16 @@ void RobotWrapper::get_q_indexes() {
 //update joint position based on tachimawari's current joint
 void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position_deg){
 
-    const auto it_name = joint_dictionary.find(joint_id);
-    if (it_name == joint_dictionary.end()) return;
+    const auto joint = joint_dictionary.find(joint_id);
+    if (joint == joint_dictionary.end()) return;
 
-    const std::string& joint_name = it_name->second;
+    const std::string& joint_name = joint->second;
     double position = position_deg * M_PI/180.0;
 
-    auto it = q_index_map.find(joint_name);
-    if (it == q_index_map.end()) return;
+    auto q_joint = q_index_map.find(joint_name);
+    if (q_joint == q_index_map.end()) return;
 
-    const int qidx = it->second;
+    const int qidx = q_joint->second;
 
     if(qidx < 0 || qidx >= (int)q.size()) return;
     q[qidx] = position;
@@ -126,13 +126,13 @@ pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
     const bool has_left_link   = model.existFrame("left_foot");
     const bool has_right_link  = model.existFrame("right_foot");
 
-    // If neither frame nor link versions exist, return identity
     if ((!has_left_frame && !has_left_link) ||
         (!has_right_frame && !has_right_link))
     {
         return pinocchio::SE3::Identity();
     }
 
+    //this check is required for the code to be compatible with both the xacro and on-shape urdf
     const bool use_frame = has_left_frame && has_right_frame;
 
     //prioritize frame 
@@ -178,6 +178,7 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
         if (frame.type != pinocchio::FrameType::BODY)
             continue;
 
+        //construct correct tf tree hierarchy
         while (parent_idx != 0 &&
             model.frames[parent_idx].type != pinocchio::FrameType::BODY)
         {
