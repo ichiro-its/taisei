@@ -32,7 +32,6 @@ int main(int argc, char ** argv){
     }
 
     const std::string & model_path = args[1];
-    const std::string & config_path = args[2];
 
     auto node = rclcpp::Node::make_shared("RobotWrapperNode");
     auto robot_wrapper_node = std::make_shared<taisei::RobotWrapperNode>(node, model_path);
