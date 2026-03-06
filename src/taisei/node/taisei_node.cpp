@@ -29,11 +29,11 @@ namespace taisei
 
 
 RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory) : node(node)
-{   
+{
     robot_wrapper = std::make_shared<RobotWrapper>(model_directory);
     tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
-    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("/joint/current_joints", 10, 
+    joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("/joint/current_joints", 10,
     [this](tachimawari_interfaces::msg::CurrentJoints::SharedPtr msg) -> void {
         for(const auto& joint : msg->joints){
             robot_wrapper->update_joint_positions(joint.id, joint.position);
@@ -42,10 +42,13 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
 
     orientation_subscriber = node->create_subscription<kansei_interfaces::msg::Status>("/measurement/status", 10,
     [this](kansei_interfaces::msg::Status::SharedPtr msg) -> void {
-        auto roll = keisan::make_degree(msg->orientation.roll);
-        auto pitch = keisan::make_degree(msg->orientation.pitch);
         auto yaw = keisan::make_degree(msg->orientation.yaw);
-        robot_wrapper->update_orientation(roll, pitch, yaw);
+        auto gravity = keisan::Point3(
+            msg->gravity.x,
+            msg->gravity.y,
+            msg->gravity.z);
+
+        robot_wrapper->update_orientation(gravity, yaw);
     });
 
     node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});

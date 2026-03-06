@@ -87,25 +87,37 @@ void RobotWrapper::update_joint_positions(u_int8_t joint_id, double position_deg
 }
 
 
-void RobotWrapper::update_orientation(
-    const keisan::Angle<double>& roll,
-    const keisan::Angle<double>& pitch,
-    const keisan::Angle<double>& yaw)
+// Update robot orientation using gravity (roll & pitch) and yaw
+void RobotWrapper::update_orientation(const keisan::Point3& gravity, const keisan::Angle<double>& yaw)
 {
-    Eigen::Quaterniond imu_q =
-        Eigen::AngleAxisd(yaw.radian(),   Eigen::Vector3d::UnitZ()) *
-        Eigen::AngleAxisd(pitch.radian(), Eigen::Vector3d::UnitY()) *
-        Eigen::AngleAxisd(roll.radian(),  Eigen::Vector3d::UnitX());
+    Eigen::Vector3d g_body{
+        -gravity.y,
+        gravity.x,
+        gravity.z
+    };
 
-    imu_q.normalize();
+    if (g_body.norm() < 1e-6)
+        return;
 
-    body_quaterniond = imu_q;
+    g_body.normalize();
+
+    Eigen::Quaterniond level_q;
+    level_q.setFromTwoVectors(g_body, Eigen::Vector3d::UnitZ());
+
+    Eigen::Quaterniond yaw_q(
+        Eigen::AngleAxisd(yaw.radian(), Eigen::Vector3d::UnitZ())
+    );
+
+    Eigen::Quaterniond final_q = yaw_q * level_q;
+    final_q.normalize();
+
+    body_quaterniond = final_q;
 
     if (q.size() >= 7) {
-        q[3] = imu_q.x();
-        q[4] = imu_q.y();
-        q[5] = imu_q.z();
-        q[6] = imu_q.w();
+        q[3] = final_q.x();
+        q[4] = final_q.y();
+        q[5] = final_q.z();
+        q[6] = final_q.w();
     }
 }
 

@@ -32,7 +32,7 @@
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/multibody/data.hpp"
 #include "Eigen/Geometry"
-#include "keisan/angle.hpp"
+#include "keisan/keisan.hpp"
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tachimawari_interfaces/msg/current_joints.hpp"
@@ -60,7 +60,7 @@ public:
     void update_kinematics();
     void get_q_indexes();
     void update_joint_positions(u_int8_t joint_id, double position);
-    void update_orientation(const keisan::Angle<double> & roll, const keisan::Angle<double> & pitch, const keisan::Angle<double> & yaw);
+    void update_orientation(const keisan::Point3 & gravity, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
     void get_config();
     std::vector<geometry_msgs::msg::TransformStamped> get_all_transforms(const rclcpp::Time& stamp);
