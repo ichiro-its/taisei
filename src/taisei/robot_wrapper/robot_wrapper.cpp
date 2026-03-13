@@ -33,6 +33,7 @@ RobotWrapper::RobotWrapper(const std::string & model_directory) : model_director
     update_kinematics();
     get_q_indexes();
     get_joint_dictionary();
+    get_feet_id();
 
     if (model.names.size() > 1 && !model.names[1].empty()){
         floating_base_name = model.names[1];
@@ -54,6 +55,23 @@ void RobotWrapper::update_kinematics() {
     pinocchio::forwardKinematics(model, *data, q);
     pinocchio::updateGlobalPlacements(model, *data);
     pinocchio::updateFramePlacements(model, *data);
+}
+
+void RobotWrapper::get_feet_id(){
+    const bool has_left_frame  = model.existFrame("left_foot_frame");
+    const bool has_right_frame = model.existFrame("right_foot_frame");
+    const bool has_left_link   = model.existFrame("left_foot");
+    const bool has_right_link  = model.existFrame("right_foot");   
+
+    if (has_left_frame && has_right_frame){
+        left_foot_id = model.getFrameId("left_foot_frame");
+        right_foot_id = model.getFrameId("right_foot_frame");
+    } else if (has_left_link && has_right_link){
+        left_foot_id = model.getFrameId("left_foot");
+        right_foot_id = model.getFrameId("right_foot");
+    } else {
+        throw std::runtime_error("URDF has no feet frames");
+    }
 }
 
 //get correct quartenion index of each joints
@@ -133,31 +151,8 @@ const pinocchio::SE3 RobotWrapper::get_frame_by_name(const std::string& name){
 
 // compute base footprint in world 
 pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
-    const bool has_left_frame  = model.existFrame("left_foot_frame");
-    const bool has_right_frame = model.existFrame("right_foot_frame");
-    const bool has_left_link   = model.existFrame("left_foot");
-    const bool has_right_link  = model.existFrame("right_foot");
-
-    if ((!has_left_frame && !has_left_link) ||
-        (!has_right_frame && !has_right_link))
-    {
-        return pinocchio::SE3::Identity();
-    }
-
-    //this check is required for the code to be compatible with both the xacro and on-shape urdf
-    const bool use_frame = has_left_frame && has_right_frame;
-
-    //prioritize frame 
-    const pinocchio::FrameIndex left_id  =
-        use_frame ? model.getFrameId("left_foot_frame")
-                  : model.getFrameId("left_foot");
-
-    const pinocchio::FrameIndex right_id =
-        use_frame ? model.getFrameId("right_foot_frame")
-                  : model.getFrameId("right_foot");
-
-    const pinocchio::SE3& T_L = data->oMf[left_id];
-    const pinocchio::SE3& T_R = data->oMf[right_id];
+    const pinocchio::SE3& T_L = data->oMf[left_foot_id];
+    const pinocchio::SE3& T_R = data->oMf[right_foot_id];
 
 
     Eigen::Vector3d pL = T_L.translation();

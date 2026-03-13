@@ -46,6 +46,7 @@ private:
     rclcpp::Node::SharedPtr node;
     rclcpp::Subscription<tachimawari_interfaces::msg::CurrentJoints>::SharedPtr joint_subscriber;
     rclcpp::Subscription<kansei_interfaces::msg::Status>::SharedPtr orientation_subscriber;
+    rclcpp::Publisher<aruku_interfaces::msg::WalkPhase>::SharedPtr walk_phase_publisher;
     rclcpp::TimerBase::SharedPtr node_timer;
 };
 
