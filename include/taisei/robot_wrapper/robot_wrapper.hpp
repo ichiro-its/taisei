@@ -66,14 +66,13 @@ public:
     void get_config();
     void get_feet_id();
     std::vector<geometry_msgs::msg::TransformStamped> get_all_transforms(const rclcpp::Time& stamp);
-
-    double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
-    pinocchio::SE3 compute_base_footprint_world();
     const pinocchio::SE3 get_frame_by_name(const std::string& name);
+    aruku_interfaces::msg::WalkPhase get_walk_phase();
+    double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
     
+    pinocchio::SE3 compute_base_footprint_world();
 
 private:
-
     pinocchio::Model model;
     std::unique_ptr<pinocchio::Data> data;
     Eigen::VectorXd q;
@@ -91,8 +90,7 @@ private:
 
     pinocchio::FrameIndex left_foot_id;
     pinocchio::FrameIndex right_foot_id;
-
-
+    pinocchio::SE3 base_footprint_world;
 };
 
 } //namespace taisei

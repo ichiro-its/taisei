@@ -37,6 +37,7 @@ public:
     RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory); 
 
     void broadcast_tf_frames();
+    void publish_walk_phase();
 
 private:
     

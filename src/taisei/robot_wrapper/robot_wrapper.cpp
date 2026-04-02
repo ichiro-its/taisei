@@ -28,6 +28,10 @@
 
 namespace taisei {
 
+namespace {
+    constexpr double FOOT_HEIGHT_EPS = 1e-3;
+}
+
 RobotWrapper::RobotWrapper(const std::string & model_directory) : model_directory_(model_directory){
     build_urdf();
     update_kinematics();
@@ -172,8 +176,7 @@ pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
 
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transforms(const rclcpp::Time& stamp) {
     update_kinematics();
-    
-    pinocchio::SE3 T_w_bf = compute_base_footprint_world();
+    base_footprint_world = compute_base_footprint_world();
     
     std::vector<geometry_msgs::msg::TransformStamped> tf_list;
 
@@ -201,7 +204,7 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
             ts.header.frame_id = "base_footprint";
         
             pinocchio::SE3 T_w_link = data->oMf[i];
-            T_relative = T_w_bf.inverse() * T_w_link;
+            T_relative = base_footprint_world.inverse() * T_w_link;
         } 
         else {
             ts.header.frame_id = model.frames[parent_idx].name;
@@ -246,5 +249,24 @@ void RobotWrapper::get_joint_dictionary(){
     }
 }
 
+aruku_interfaces::msg::WalkPhase RobotWrapper::get_walk_phase(){
+    Eigen::Vector3d pL = base_footprint_world.inverse().act(data->oMf[left_foot_id].translation());
+    Eigen::Vector3d pR = base_footprint_world.inverse().act(data->oMf[right_foot_id].translation());
+
+    aruku_interfaces::msg::WalkPhase walk_phase;
+
+    bool left_contact  = std::abs(pL.z()) < FOOT_HEIGHT_EPS;
+    bool right_contact = std::abs(pR.z()) < FOOT_HEIGHT_EPS;
+
+    if (left_contact && right_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::DOUBLE_SUPPORT;
+    } else if (left_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::LEFT_SUPPORT;
+    } else if (right_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::RIGHT_SUPPORT;
+    }
+
+    return walk_phase;
+}
 
 } //namespace taisei

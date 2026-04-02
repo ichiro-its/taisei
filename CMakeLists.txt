@@ -16,6 +16,7 @@ find_package(tachimawari  REQUIRED)
 find_package(keisan REQUIRED)
 find_package(jitsuyo REQUIRED)
 find_package(ament_cmake REQUIRED)
+find_package(aruku_interfaces REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
    "src/${PROJECT_NAME}/node/taisei_node.cpp"
@@ -38,6 +39,7 @@ ament_target_dependencies(${PROJECT_NAME}
     geometry_msgs
     pinocchio
     tachimawari_interfaces
+    aruku_interfaces
     tachimawari
     keisan
     jitsuyo)
@@ -78,6 +80,7 @@ ament_export_dependencies(
   pinocchio
   tachimawari_interfaces
   tachimawari
+  aruku_interfaces
   keisan
   jitsuyo
 )
