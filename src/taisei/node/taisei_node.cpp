@@ -51,7 +51,12 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
         robot_wrapper->update_orientation(gravity, yaw);
     });
 
-    node_timer = node->create_wall_timer(8ms, [this]() { this->broadcast_tf_frames();});
+    walk_phase_publisher = node->create_publisher<aruku_interfaces::msg::WalkPhase>("/walking/walk_phase", 10);
+
+    node_timer = node->create_wall_timer(8ms, [this]() { 
+        this->broadcast_tf_frames();
+        this->publish_walk_phase();
+    });
 }
 
 void RobotWrapperNode::broadcast_tf_frames(){
@@ -59,6 +64,11 @@ void RobotWrapperNode::broadcast_tf_frames(){
     for(auto &tf_frame : tf_frames){
         tf_broadcaster->sendTransform(tf_frame);
     }
+}
+
+void RobotWrapperNode::publish_walk_phase(){
+    auto phase = robot_wrapper->get_walk_phase();
+    walk_phase_publisher->publish(phase);
 }
 
 } //namespace taisei

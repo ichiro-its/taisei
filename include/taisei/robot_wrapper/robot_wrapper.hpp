@@ -40,6 +40,7 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "kansei_interfaces/msg/status.hpp"
+#include "aruku_interfaces/msg/walk_phase.hpp"
 
 #include <chrono>
 #include <vector>
@@ -63,15 +64,15 @@ public:
     void update_orientation(const keisan::Point3 & gravity, const keisan::Angle<double> & yaw);
     void get_joint_dictionary();
     void get_config();
+    void get_feet_id();
     std::vector<geometry_msgs::msg::TransformStamped> get_all_transforms(const rclcpp::Time& stamp);
-
-    double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
-    pinocchio::SE3 compute_base_footprint_world();
     const pinocchio::SE3 get_frame_by_name(const std::string& name);
+    aruku_interfaces::msg::WalkPhase get_walk_phase();
+    double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
     
+    pinocchio::SE3 compute_base_footprint_world();
 
 private:
-
     pinocchio::Model model;
     std::unique_ptr<pinocchio::Data> data;
     Eigen::VectorXd q;
@@ -87,7 +88,9 @@ private:
     std::vector<std::pair<pinocchio::FrameIndex, pinocchio::FrameIndex>> frame_indexes;
     std::map<uint8_t, std::string> joint_dictionary;
 
-
+    pinocchio::FrameIndex left_foot_id;
+    pinocchio::FrameIndex right_foot_id;
+    pinocchio::SE3 base_footprint_world;
 };
 
 } //namespace taisei

@@ -28,11 +28,16 @@
 
 namespace taisei {
 
+namespace {
+    constexpr double FOOT_HEIGHT_EPS = 1e-3;
+}
+
 RobotWrapper::RobotWrapper(const std::string & model_directory) : model_directory_(model_directory){
     build_urdf();
     update_kinematics();
     get_q_indexes();
     get_joint_dictionary();
+    get_feet_id();
 
     if (model.names.size() > 1 && !model.names[1].empty()){
         floating_base_name = model.names[1];
@@ -54,6 +59,23 @@ void RobotWrapper::update_kinematics() {
     pinocchio::forwardKinematics(model, *data, q);
     pinocchio::updateGlobalPlacements(model, *data);
     pinocchio::updateFramePlacements(model, *data);
+}
+
+void RobotWrapper::get_feet_id(){
+    const bool has_left_frame  = model.existFrame("left_foot_frame");
+    const bool has_right_frame = model.existFrame("right_foot_frame");
+    const bool has_left_link   = model.existFrame("left_foot");
+    const bool has_right_link  = model.existFrame("right_foot");   
+
+    if (has_left_frame && has_right_frame){
+        left_foot_id = model.getFrameId("left_foot_frame");
+        right_foot_id = model.getFrameId("right_foot_frame");
+    } else if (has_left_link && has_right_link){
+        left_foot_id = model.getFrameId("left_foot");
+        right_foot_id = model.getFrameId("right_foot");
+    } else {
+        throw std::runtime_error("URDF has no feet frames");
+    }
 }
 
 //get correct quartenion index of each joints
@@ -133,31 +155,8 @@ const pinocchio::SE3 RobotWrapper::get_frame_by_name(const std::string& name){
 
 // compute base footprint in world 
 pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
-    const bool has_left_frame  = model.existFrame("left_foot_frame");
-    const bool has_right_frame = model.existFrame("right_foot_frame");
-    const bool has_left_link   = model.existFrame("left_foot");
-    const bool has_right_link  = model.existFrame("right_foot");
-
-    if ((!has_left_frame && !has_left_link) ||
-        (!has_right_frame && !has_right_link))
-    {
-        return pinocchio::SE3::Identity();
-    }
-
-    //this check is required for the code to be compatible with both the xacro and on-shape urdf
-    const bool use_frame = has_left_frame && has_right_frame;
-
-    //prioritize frame 
-    const pinocchio::FrameIndex left_id  =
-        use_frame ? model.getFrameId("left_foot_frame")
-                  : model.getFrameId("left_foot");
-
-    const pinocchio::FrameIndex right_id =
-        use_frame ? model.getFrameId("right_foot_frame")
-                  : model.getFrameId("right_foot");
-
-    const pinocchio::SE3& T_L = data->oMf[left_id];
-    const pinocchio::SE3& T_R = data->oMf[right_id];
+    const pinocchio::SE3& T_L = data->oMf[left_foot_id];
+    const pinocchio::SE3& T_R = data->oMf[right_foot_id];
 
 
     Eigen::Vector3d pL = T_L.translation();
@@ -177,8 +176,7 @@ pinocchio::SE3 RobotWrapper::compute_base_footprint_world() {
 
 std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transforms(const rclcpp::Time& stamp) {
     update_kinematics();
-    
-    pinocchio::SE3 T_w_bf = compute_base_footprint_world();
+    base_footprint_world = compute_base_footprint_world();
     
     std::vector<geometry_msgs::msg::TransformStamped> tf_list;
 
@@ -206,7 +204,7 @@ std::vector<geometry_msgs::msg::TransformStamped> RobotWrapper::get_all_transfor
             ts.header.frame_id = "base_footprint";
         
             pinocchio::SE3 T_w_link = data->oMf[i];
-            T_relative = T_w_bf.inverse() * T_w_link;
+            T_relative = base_footprint_world.inverse() * T_w_link;
         } 
         else {
             ts.header.frame_id = model.frames[parent_idx].name;
@@ -251,5 +249,24 @@ void RobotWrapper::get_joint_dictionary(){
     }
 }
 
+aruku_interfaces::msg::WalkPhase RobotWrapper::get_walk_phase(){
+    Eigen::Vector3d pL = base_footprint_world.inverse().act(data->oMf[left_foot_id].translation());
+    Eigen::Vector3d pR = base_footprint_world.inverse().act(data->oMf[right_foot_id].translation());
+
+    aruku_interfaces::msg::WalkPhase walk_phase;
+
+    bool left_contact  = std::abs(pL.z()) < FOOT_HEIGHT_EPS;
+    bool right_contact = std::abs(pR.z()) < FOOT_HEIGHT_EPS;
+
+    if (left_contact && right_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::DOUBLE_SUPPORT;
+    } else if (left_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::LEFT_SUPPORT;
+    } else if (right_contact) {
+        walk_phase.current = aruku_interfaces::msg::WalkPhase::RIGHT_SUPPORT;
+    }
+
+    return walk_phase;
+}
 
 } //namespace taisei
