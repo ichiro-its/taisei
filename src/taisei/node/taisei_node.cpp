@@ -27,10 +27,12 @@ using namespace std::chrono_literals;
 namespace taisei
 {
 
-
-RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory) : node(node)
+RobotWrapperNode::RobotWrapperNode(
+    const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string& mode
+) : node(node), mode(mode)
 {
     robot_wrapper = std::make_shared<RobotWrapper>(model_directory);
+    robot_wrapper->set_tf_mode(mode);
     tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(node);
 
     joint_subscriber = node->create_subscription<tachimawari_interfaces::msg::CurrentJoints>("/joint/current_joints", 10,
@@ -53,17 +55,15 @@ RobotWrapperNode::RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const s
 
     walk_phase_publisher = node->create_publisher<aruku_interfaces::msg::WalkPhase>("/walking/walk_phase", 10);
 
-    node_timer = node->create_wall_timer(8ms, [this]() { 
+    node_timer = node->create_wall_timer(8ms, [this]() {
         this->broadcast_tf_frames();
         this->publish_walk_phase();
     });
 }
 
 void RobotWrapperNode::broadcast_tf_frames(){
-    tf_frames = robot_wrapper->get_all_transforms(node->now());
-    for(auto &tf_frame : tf_frames){
-        tf_broadcaster->sendTransform(tf_frame);
-    }
+    const auto & tf_frames = robot_wrapper->get_all_transforms(node->now());
+    tf_broadcaster->sendTransform(tf_frames);
 }
 
 void RobotWrapperNode::publish_walk_phase(){
