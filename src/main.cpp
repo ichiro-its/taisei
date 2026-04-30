@@ -27,16 +27,29 @@ int main(int argc, char ** argv){
     auto args = rclcpp::init_and_remove_ros_arguments(argc, argv);
 
     if (args.size() < 2) {
-        std::cerr << "Usage: ros2 run taisei robot_wrapper <urdf_path>" << std::endl;
+        std::cerr << "Usage: ros2 run taisei robot_wrapper <urdf_path> [--mode ipm|full]" << std::endl;
         return 0;
     }
 
     const std::string & model_path = args[1];
 
+    std::string mode = "ipm";
+    for (size_t i = 2; i < args.size(); ++i) {
+        if (args[i] == "--mode") {
+            if (i + 1 >= args.size()) {
+                std::cerr << "Missing value for --mode (ipm|full)" << std::endl;
+                return 0;
+            }
+            const std::string & v = args[i + 1];
+            mode = v;
+            ++i;
+        }
+    }
+
     auto node = rclcpp::Node::make_shared("RobotWrapperNode");
-    auto robot_wrapper_node = std::make_shared<taisei::RobotWrapperNode>(node, model_path);
+    auto robot_wrapper_node = std::make_shared<taisei::RobotWrapperNode>(node, model_path, mode);
 
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
-} 
+}

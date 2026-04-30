@@ -46,8 +46,8 @@
 #include <vector>
 #include <memory>
 #include <string>
-
-
+#include <unordered_map>
+#include <map>
 
 namespace taisei
 {
@@ -65,21 +65,22 @@ public:
     void get_joint_dictionary();
     void get_config();
     void get_feet_id();
-    std::vector<geometry_msgs::msg::TransformStamped> get_all_transforms(const rclcpp::Time& stamp);
+    void set_tf_mode(const std::string & mode);
+    const std::vector<geometry_msgs::msg::TransformStamped> & get_all_transforms(const rclcpp::Time & stamp);
     const pinocchio::SE3 get_frame_by_name(const std::string& name);
     aruku_interfaces::msg::WalkPhase get_walk_phase();
     double get_yaw_from_quaternion(const Eigen::Quaterniond& q);
-    
+
     pinocchio::SE3 compute_base_footprint_world();
 
 private:
     pinocchio::Model model;
     std::unique_ptr<pinocchio::Data> data;
     Eigen::VectorXd q;
-    
+
     std::string model_directory_;
     std::string path_;
-    
+
     std::unordered_map<std::string, int> q_index_map;
     std::string floating_base_name;
 
@@ -90,7 +91,13 @@ private:
 
     pinocchio::FrameIndex left_foot_id;
     pinocchio::FrameIndex right_foot_id;
+    pinocchio::FrameIndex camera_id;
     pinocchio::SE3 base_footprint_world;
+
+    std::string tf_mode;
+    std::vector<pinocchio::FrameIndex> active_frames;
+    std::vector<pinocchio::FrameIndex> body_parent_map;
+    std::vector<geometry_msgs::msg::TransformStamped> tf_cache;
 };
 
 } //namespace taisei

@@ -21,11 +21,9 @@
 // SOFTWARE.
 
 #ifndef TAISE__NODE__TAISEI_NODE_HPP
-#define TAISEI__NODE__TAISEI_NODE_HPP    
+#define TAISEI__NODE__TAISEI_NODE_HPP
 
 #include "taisei/robot_wrapper/robot_wrapper.hpp"
-
-
 
 namespace taisei{
 
@@ -34,23 +32,25 @@ class RobotWrapperNode
 public:
     using TransformStamped = geometry_msgs::msg::TransformStamped;
 
-    RobotWrapperNode(const rclcpp::Node::SharedPtr & node, const std::string & model_directory); 
+    RobotWrapperNode(
+        const rclcpp::Node::SharedPtr & node, const std::string & model_directory, const std::string & mode);
 
     void broadcast_tf_frames();
     void publish_walk_phase();
 
 private:
-    
+
     std::shared_ptr<RobotWrapper> robot_wrapper;
-    std::vector<TransformStamped> tf_frames;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
     rclcpp::Node::SharedPtr node;
     rclcpp::Subscription<tachimawari_interfaces::msg::CurrentJoints>::SharedPtr joint_subscriber;
     rclcpp::Subscription<kansei_interfaces::msg::Status>::SharedPtr orientation_subscriber;
     rclcpp::Publisher<aruku_interfaces::msg::WalkPhase>::SharedPtr walk_phase_publisher;
     rclcpp::TimerBase::SharedPtr node_timer;
+
+    std::string mode;
 };
 
 } //namespace taisei
 
-#endif //TAISEI__NODE__TAISEI_NODE_HPP    
+#endif //TAISEI__NODE__TAISEI_NODE_HPP
