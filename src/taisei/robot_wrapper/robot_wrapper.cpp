@@ -41,8 +41,12 @@ RobotWrapper::RobotWrapper(const std::string & model_directory) : model_director
     if (!model.existFrame("camera")) {
         throw std::runtime_error("URDF has no frame: camera");
     }
+    if (!model.existFrame("neck")) {
+        throw std::runtime_error("URDF has no frame: neck");
+    }
 
     camera_id = model.getFrameId("camera");
+    neck_id = model.getFrameId("neck");
 
     if (model.names.size() > 1 && !model.names[1].empty()){
         floating_base_name = model.names[1];
@@ -85,7 +89,7 @@ void RobotWrapper::get_feet_id(){
     }
 }
 
-// set TF publishing mode: "ipm" (base_footprint and camera) or "full" (all body frames)
+// set TF publishing mode: "ipm" (base_footprint, camera, and neck) or "full" (all body frames)
 void RobotWrapper::set_tf_mode(const std::string& mode) {
     tf_mode = mode;
 
@@ -107,6 +111,7 @@ void RobotWrapper::set_tf_mode(const std::string& mode) {
     active_frames.clear();
     if (tf_mode == "ipm") {
         active_frames.push_back(camera_id);
+        active_frames.push_back(neck_id);
     } else {
         active_frames.reserve(model.frames.size());
         for (size_t i = 1; i < model.frames.size(); ++i) {

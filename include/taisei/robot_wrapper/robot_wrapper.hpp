@@ -92,6 +92,7 @@ private:
     pinocchio::FrameIndex left_foot_id;
     pinocchio::FrameIndex right_foot_id;
     pinocchio::FrameIndex camera_id;
+    pinocchio::FrameIndex neck_id;
     pinocchio::SE3 base_footprint_world;
 
     std::string tf_mode;
